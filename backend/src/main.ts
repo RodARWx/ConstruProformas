@@ -19,7 +19,7 @@ async function bootstrap() {
   expressApp.use(cors(corsOptions));
   expressApp.options(/.*/, cors(corsOptions));
 
-  app.enableCors(corsOptions);
+  app.enableCors(corsOptions as any);
 
   // Prefijo global para todos los endpoints REST
   app.setGlobalPrefix('api');
