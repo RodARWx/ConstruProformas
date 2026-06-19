@@ -1,0 +1,74 @@
+{
+  "idProforma": "CM-PROF-99",
+  "nombreProyecto": "PROFORMA DISEÑO VIAL SEDEMI (GUAYAQUIL)",
+  "fecha": "2026-06-16",
+  "tiempoEjecucion": "17 días",
+  "appliesIva": true,
+  "notas": null,
+  "profile": {
+    "nombre": "Ing. Mario David Lincango Callatasig",
+    "cargo": "GERENTE GENERAL",
+    "registroSenescyt": "1005-2018-1984075",
+    "telefono": "0992914455",
+    "correo": "mario.lincango@construmetrica.com"
+  },
+  "customer": {
+    "nombreCliente": "SEDEMI",
+    "rucCedula": "1790123456001",
+    "direccion": "Guayaquil, Ecuador"
+  },
+  "detalles": [
+    {
+      "esCategoria": true,
+      "descripcion": "1. ESTUDIOS PREVIOS Y ANÁLISIS"
+    },
+    {
+      "codigo": "1.1",
+      "descripcion": "Estudio de suelos y caracterización geotécnica",
+      "tiempo": "4",
+      "unidad": "u",
+      "cantidad": 1,
+      "costoUnitario": 850
+    },
+    {
+      "codigo": "1.2",
+      "descripcion": "Análisis de estabilidad de taludes",
+      "tiempo": "3",
+      "unidad": "u",
+      "cantidad": 2,
+      "costoUnitario": 420
+    },
+    {
+      "esCategoria": true,
+      "descripcion": "2. DISEÑO VIAL Y PAVIMENTO"
+    },
+    {
+      "codigo": "2.1",
+      "descripcion": "Diseño geométrico de la vía",
+      "tiempo": "5",
+      "unidad": "Glb",
+      "cantidad": 11462.45,
+      "costoUnitario": 0.32
+    },
+    {
+      "codigo": "2.2",
+      "descripcion": "Replanteo topográfico de ejes y curvas",
+      "tiempo": "2",
+      "unidad": "km",
+      "cantidad": 3.5,
+      "costoUnitario": 180
+    },
+    {
+      "esCategoria": true,
+      "descripcion": "3. INFORMES Y ENTREGABLES"
+    },
+    {
+      "codigo": "3.1",
+      "descripcion": "Informe técnico final con planos PDF y DWG",
+      "tiempo": "3",
+      "unidad": "u",
+      "cantidad": 1,
+      "costoUnitario": 650
+    }
+  ]
+}

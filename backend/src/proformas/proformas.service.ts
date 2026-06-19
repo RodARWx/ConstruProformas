@@ -195,6 +195,7 @@ export class ProformasService {
 
     const calculated = calculateProformaTotals(
       source.detalles.map((linea) => ({
+        esCategoria: linea.esCategoria,
         codigo: linea.codigo ?? undefined,
         descripcion: linea.descripcion,
         tiempo: linea.tiempo ?? undefined,
@@ -340,10 +341,11 @@ export class ProformasService {
         codigo: linea.codigo ?? null,
         descripcion: linea.descripcion,
         tiempo: linea.tiempo ?? null,
-        unidad: linea.unidad,
-        cantidad: linea.cantidad,
-        costoUnitario: linea.costoUnitario,
+        unidad: linea.unidad ?? '',
+        cantidad: linea.cantidad ?? 0,
+        costoUnitario: linea.costoUnitario ?? 0,
         total: linea.total,
+        esCategoria: linea.esCategoria ?? false,
       }),
     );
   }
@@ -352,6 +354,7 @@ export class ProformasService {
   private recalculateFromExistingDetails(proforma: Proforma) {
     return calculateProformaTotals(
       proforma.detalles.map((linea) => ({
+        esCategoria: linea.esCategoria,
         codigo: linea.codigo ?? undefined,
         descripcion: linea.descripcion,
         tiempo: linea.tiempo ?? undefined,

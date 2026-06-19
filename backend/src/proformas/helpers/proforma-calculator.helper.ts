@@ -36,12 +36,32 @@ export function calculateProformaTotals(
   ivaRate: number,
 ): CalculatedProformaTotals {
   const calculatedDetails: CalculatedDetailLine[] = detalles.map((linea) => {
-    const total = roundMoney(linea.cantidad * linea.costoUnitario);
-    return { ...linea, total };
+    if (linea.esCategoria) {
+      return {
+        ...linea,
+        unidad: linea.unidad ?? '',
+        cantidad: linea.cantidad ?? 0,
+        costoUnitario: linea.costoUnitario ?? 0,
+        total: 0,
+      };
+    }
+
+    const total = roundMoney(
+      (linea.cantidad ?? 0) * (linea.costoUnitario ?? 0),
+    );
+    return {
+      ...linea,
+      cantidad: linea.cantidad ?? 0,
+      costoUnitario: linea.costoUnitario ?? 0,
+      unidad: linea.unidad ?? '',
+      total,
+    };
   });
 
   const subtotal = roundMoney(
-    calculatedDetails.reduce((sum, linea) => sum + linea.total, 0),
+    calculatedDetails
+      .filter((linea) => !linea.esCategoria)
+      .reduce((sum, linea) => sum + linea.total, 0),
   );
 
   const iva = appliesIva ? roundMoney(subtotal * ivaRate) : 0;

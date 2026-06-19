@@ -60,5 +60,27 @@ describe('proforma-calculator.helper', () => {
       expect(result.totalGeneral).toBe(255);
       expect(result.totalGeneral).toBe(result.subtotal);
     });
+
+    it('excluye las filas de categoría del subtotal y asigna total 0', () => {
+      const detalles: CreateProformaDetailDto[] = [
+        {
+          esCategoria: true,
+          descripcion: '2. DISEÑO VIAL',
+        },
+        {
+          descripcion: 'Diseño geométrico',
+          unidad: 'Glb',
+          cantidad: 10,
+          costoUnitario: 25.5,
+        },
+      ];
+
+      const result = calculateProformaTotals(detalles, true, 0.15);
+
+      expect(result.detalles[0].total).toBe(0);
+      expect(result.subtotal).toBe(255);
+      expect(result.iva).toBe(38.25);
+      expect(result.totalGeneral).toBe(293.25);
+    });
   });
 });

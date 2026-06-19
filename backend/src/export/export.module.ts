@@ -4,6 +4,7 @@ import { ExportService } from './export.service';
 import { ProformaExportController } from './proforma-export.controller';
 import { ProformaExcelExportService } from './services/proforma-excel-export.service';
 import { ProformaPdfExportService } from './services/proforma-pdf-export.service';
+import { ProformaHtmlPdfService } from './services/proforma-html-pdf.service';
 
 @Module({
   imports: [ProformasModule],
@@ -12,6 +13,7 @@ import { ProformaPdfExportService } from './services/proforma-pdf-export.service
     ExportService,
     ProformaExcelExportService,
     ProformaPdfExportService,
+    ProformaHtmlPdfService,
   ],
   exports: [ExportService],
 })
