@@ -94,6 +94,23 @@ export function CatalogPage() {
     { key: 'descripcion', header: 'Descripción', accessor: 'descripcion' },
     { key: 'unidad', header: 'Unidad', accessor: 'unidad' },
     {
+      key: 'categoria',
+      header: 'Categoría',
+      render: (row) => row.categoriaNombre ?? '—',
+    },
+    {
+      key: 'diasLaborables',
+      header: 'Días lab.',
+      numeric: true,
+      render: (row) => row.diasLaborables ?? 1,
+    },
+    {
+      key: 'ivaPercentage',
+      header: 'IVA %',
+      numeric: true,
+      render: (row) => `${row.ivaPercentage ?? 15}%`,
+    },
+    {
       key: 'costo',
       header: 'Costo unit.',
       numeric: true,
@@ -202,6 +219,24 @@ export function CatalogPage() {
                     Costo unitario
                   </dt>
                   <dd>{formatCurrency(lastInsertedLine.costoUnitario)}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-brand-gray/60">
+                    Categoría
+                  </dt>
+                  <dd>{lastInsertedLine.categoriaNombre ?? '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-brand-gray/60">
+                    Días laborables
+                  </dt>
+                  <dd>{lastInsertedLine.diasLaborables}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold uppercase text-brand-gray/60">
+                    IVA %
+                  </dt>
+                  <dd>{lastInsertedLine.ivaPercentage}%</dd>
                 </div>
               </dl>
             </div>

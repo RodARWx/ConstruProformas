@@ -223,8 +223,8 @@ export class ProformaExcelExportService {
       ['Subtotal', proforma.subtotal],
     ];
 
-    if (proforma.appliesIva) {
-      totals.push(['IVA (15%)', proforma.iva]);
+    if (proforma.iva > 0) {
+      totals.push(['IVA', proforma.iva]);
     }
 
     totals.push(['TOTAL GENERAL', proforma.totalGeneral]);

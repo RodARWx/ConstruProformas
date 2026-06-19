@@ -82,25 +82,6 @@ Test-Endpoint "GET /proformas/next-id" {
     $r | ConvertTo-Json
 }
 
-Test-Endpoint "POST /proformas/import-preview" {
-    $body = @{
-        appliesIva = $true
-        rubros = @(
-            @{
-                descripcion   = "Excavacion manual"
-                unidad        = "m3"
-                cantidad      = 10
-                costoUnitario = 25.5
-            }
-        )
-    } | ConvertTo-Json -Depth 5
-    $r = Invoke-RestMethod -Uri "$base/proformas/import-preview" -Method Post -Headers $headers -Body $body -ContentType "application/json"
-    if ($r.subtotal -ne 255 -or $r.totalGeneral -ne 293.25) {
-        throw "Totales incorrectos: subtotal=$($r.subtotal) total=$($r.totalGeneral)"
-    }
-    $r | ConvertTo-Json -Depth 5
-}
-
 Test-Endpoint "POST /proformas (crear con next-id)" {
     $nextId = (Invoke-RestMethod -Uri "$base/proformas/next-id" -Headers $headers).suggestedId
     $script:testProformaId = $nextId
@@ -109,15 +90,16 @@ Test-Endpoint "POST /proformas (crear con next-id)" {
         idProforma     = $nextId
         nombreProyecto = "Proyecto Integracion"
         fecha          = (Get-Date -Format "yyyy-MM-dd")
-        appliesIva     = $true
         profileId      = 1
         customerId     = 1
         detalles       = @(
             @{
-                descripcion   = "Excavacion manual"
-                unidad        = "m3"
-                cantidad      = 10
-                costoUnitario = 25.5
+                descripcion     = "Excavacion manual"
+                unidad          = "m3"
+                cantidad        = 10
+                costoUnitario   = 25.5
+                diasLaborables  = 1
+                ivaPercentage   = 15
             }
         )
     } | ConvertTo-Json -Depth 5

@@ -13,4 +13,8 @@ export class SearchCatalogQueryDto {
   @Min(1)
   @Max(50)
   limit?: number = 20;
+
+  @IsOptional()
+  @IsString()
+  categoriaNombre?: string;
 }

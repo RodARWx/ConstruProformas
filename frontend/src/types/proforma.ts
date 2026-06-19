@@ -15,6 +15,8 @@ export interface ProformaDetail {
   cantidad: number
   costoUnitario: number
   total: number
+  diasLaborables: number
+  ivaPercentage: number
 }
 
 export interface Proforma {
@@ -26,7 +28,7 @@ export interface Proforma {
   subtotal: number
   iva: number
   totalGeneral: number
-  appliesIva: boolean
+  montoContrato: number
   status: ProformaStatus
   profileId: number
   customerId: number
@@ -49,7 +51,7 @@ export interface Proforma {
   }
 }
 
-/** Cabecera de proforma en borrador local (fase 5–7). */
+/** Cabecera de proforma en borrador local. */
 export interface ProformaHeaderDraft {
   idProforma: string
   suggestedId: string
@@ -58,13 +60,9 @@ export interface ProformaHeaderDraft {
   nombreCliente: string
   rucCedula: string
   direccion: string
-  /** Solo frontend por ahora; el backend actual no persiste este campo. */
-  montoContrato: string
-  tiempoEjecucion: string
+  telefonoCliente: string
   fecha: string
-  notas: string
   profileId: number | ''
-  appliesIva: boolean
 }
 
 export interface ProformaDraft {
@@ -102,11 +100,8 @@ export function createEmptyHeaderDraft(
     nombreCliente: '',
     rucCedula: '',
     direccion: '',
-    montoContrato: '',
-    tiempoEjecucion: '',
+    telefonoCliente: '',
     fecha,
-    notas: '',
     profileId: '',
-    appliesIva: true,
   }
 }

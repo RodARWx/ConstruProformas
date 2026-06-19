@@ -9,16 +9,15 @@ export interface ProformaDetailPayload {
   unidad: string
   cantidad: number
   costoUnitario: number
+  diasLaborables: number
+  ivaPercentage: number
 }
 
-/** Payload según CreateProformaDto del backend. */
+/** Payload según CreateProformaDto del backend (V2). Sin campos calculados en servidor. */
 export interface CreateProformaPayload {
   idProforma: string
   nombreProyecto: string
-  tiempoEjecucion?: string
   fecha: string
-  notas?: string
-  appliesIva: boolean
   profileId: number
   customerId: number
   detalles: ProformaDetailPayload[]
@@ -35,6 +34,8 @@ function mapDetailLine(line: ProformaDetailLine): ProformaDetailPayload {
     unidad: line.unidad.trim(),
     cantidad: line.cantidad,
     costoUnitario: line.costoUnitario,
+    diasLaborables: line.diasLaborables,
+    ivaPercentage: line.ivaPercentage,
   }
 }
 
@@ -45,10 +46,7 @@ export function draftToCreatePayload(
   return {
     idProforma: header.idProforma.trim(),
     nombreProyecto: header.nombreProyecto.trim(),
-    tiempoEjecucion: header.tiempoEjecucion.trim() || undefined,
     fecha: header.fecha,
-    notas: header.notas.trim() || undefined,
-    appliesIva: header.appliesIva,
     profileId: Number(header.profileId),
     customerId: Number(header.customerId),
     detalles: detalles.map(mapDetailLine),
@@ -59,6 +57,18 @@ export function draftToUpdatePayload(
   header: ProformaHeaderDraft,
   detalles: ProformaDetailLine[],
 ): UpdateProformaPayload {
-  const { idProforma: _id, ...payload } = draftToCreatePayload(header, detalles)
-  return payload
+  const {
+    nombreProyecto,
+    fecha,
+    profileId,
+    customerId,
+    detalles: lineas,
+  } = draftToCreatePayload(header, detalles)
+  return {
+    nombreProyecto,
+    fecha,
+    profileId,
+    customerId,
+    detalles: lineas,
+  }
 }

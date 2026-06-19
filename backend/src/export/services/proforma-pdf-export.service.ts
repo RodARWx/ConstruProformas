@@ -268,8 +268,8 @@ export class ProformaPdfExportService {
       ['Subtotal', formatCurrency(proforma.subtotal)],
     ];
 
-    if (proforma.appliesIva) {
-      rows.push(['IVA (15%)', formatCurrency(proforma.iva)]);
+    if (proforma.iva > 0) {
+      rows.push(['IVA', formatCurrency(proforma.iva)]);
     }
 
     rows.push(['TOTAL GENERAL', formatCurrency(proforma.totalGeneral)]);

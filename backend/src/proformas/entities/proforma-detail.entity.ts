@@ -34,6 +34,14 @@ export class ProformaDetail {
   @Column({ type: 'real', default: 0 })
   total: number;
 
+  /** Días laborables de la línea (copiados del catálogo, editables por proforma). */
+  @Column({ type: 'integer', default: 1 })
+  diasLaborables: number;
+
+  /** Porcentaje de IVA de la línea (0–100, copiado del catálogo, editable por proforma). */
+  @Column({ type: 'real', default: 15 })
+  ivaPercentage: number;
+
   @ManyToOne(() => Proforma, (proforma) => proforma.detalles, {
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE',

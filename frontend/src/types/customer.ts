@@ -6,3 +6,12 @@ export interface Customer {
   telefono: string | null
   correo: string | null
 }
+
+export interface CreateCustomerPayload {
+  nombreCliente: string
+  rucCedula: string
+  telefono?: string
+  direccion?: string
+}
+
+export type UpdateCustomerPayload = Partial<CreateCustomerPayload>

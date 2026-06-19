@@ -20,6 +20,7 @@ export class Proforma {
   @Column({ type: 'text' })
   nombreProyecto: string;
 
+  /** Suma de diasLaborables de todas las líneas (calculado en servidor). */
   @Column({ type: 'text', nullable: true })
   tiempoEjecucion: string | null;
 
@@ -29,17 +30,21 @@ export class Proforma {
   @Column({ type: 'text', nullable: true })
   notas: string | null;
 
+  /** Subtotal sin IVA: Σ (cantidad × costoUnitario) por línea. */
   @Column({ type: 'real', default: 0 })
   subtotal: number;
 
+  /** IVA total: Σ ivaLinea de cada rubro. */
   @Column({ type: 'real', default: 0 })
   iva: number;
 
+  /** Total con IVA: subtotal + iva. */
   @Column({ type: 'real', default: 0 })
   totalGeneral: number;
 
-  @Column({ type: 'boolean', default: true })
-  appliesIva: boolean;
+  /** Monto del contrato (= totalGeneral). Calculado y persistido en servidor. */
+  @Column({ type: 'real', default: 0 })
+  montoContrato: number;
 
   @Column({
     type: 'text',

@@ -10,8 +10,6 @@ import { CreateProformaDto } from './dto/create-proforma.dto';
 import { NextIdResponse } from './dto/next-id-response.dto';
 import { SyncProformasDto } from './dto/sync-proformas.dto';
 import { SyncProformasResult } from './dto/sync-result.dto';
-import { ImportPreviewDto } from './dto/import-preview.dto';
-import { ImportPreviewResult } from './dto/import-preview-result.dto';
 import { UpdateProformaDto } from './dto/update-proforma.dto';
 import { Proforma } from './entities/proforma.entity';
 import { ProformasService } from './proformas.service';
@@ -42,15 +40,6 @@ export class ProformasController {
   @Post('sync')
   sync(@Body() dto: SyncProformasDto): Promise<SyncProformasResult> {
     return this.proformasService.syncBatch(dto.proformas);
-  }
-
-  /**
-   * Recibe rubros crudos extraídos de Excel, recalcula totales en servidor
-   * y retorna la estructura formateada para previsualización antes de guardar.
-   */
-  @Post('import-preview')
-  importPreview(@Body() dto: ImportPreviewDto): ImportPreviewResult {
-    return this.proformasService.previewImport(dto);
   }
 
   /** Obtiene una proforma por su ID editable */

@@ -16,12 +16,9 @@ export function proformaToDraft(proforma: Proforma): ProformaDraft {
       nombreCliente: proforma.customer?.nombreCliente ?? '',
       rucCedula: proforma.customer?.rucCedula ?? '',
       direccion: proforma.customer?.direccion ?? '',
-      montoContrato: '',
-      tiempoEjecucion: proforma.tiempoEjecucion ?? '',
+      telefonoCliente: proforma.customer?.telefono ?? '',
       fecha: proforma.fecha,
-      notas: proforma.notas ?? '',
       profileId: proforma.profileId,
-      appliesIva: proforma.appliesIva,
     },
     detalles: (proforma.detalles ?? []).map((line) =>
       createDetailLine({
@@ -31,6 +28,8 @@ export function proformaToDraft(proforma: Proforma): ProformaDraft {
         unidad: line.unidad,
         cantidad: line.cantidad,
         costoUnitario: line.costoUnitario,
+        diasLaborables: line.diasLaborables ?? 1,
+        ivaPercentage: line.ivaPercentage ?? 15,
       }),
     ),
   }

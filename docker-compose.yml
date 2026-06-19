@@ -9,15 +9,17 @@ services:
       - "${API_PORT:-3000}:3000"
     environment:
       NODE_ENV: production
+      PORT: "3000"
       DATABASE_PATH: /app/data/construproformas.db
-      DB_SYNCHRONIZE: "true"
+      DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       IVA_RATE: ${IVA_RATE:-0.15}
       API_KEY: ${API_KEY:-construproformas-dev-key}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:5173}
     volumes:
-      # Volumen persistente para la base de datos SQLite en el NAS
+      # SQLite + exports PDF/Excel en {DATABASE_PATH dir}/exports/
       - sqlite-data:/app/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "sh", "-c", "curl -f \"http://127.0.0.1:$${PORT:-3000}/api/health\" || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -2,7 +2,6 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
-  IsBoolean,
   IsDateString,
   IsEnum,
   IsInt,
@@ -22,20 +21,8 @@ export class UpdateProformaDto {
   nombreProyecto?: string;
 
   @IsOptional()
-  @IsString()
-  tiempoEjecucion?: string;
-
-  @IsOptional()
   @IsDateString({}, { message: 'La fecha debe tener formato ISO válido (YYYY-MM-DD)' })
   fecha?: string;
-
-  @IsOptional()
-  @IsString()
-  notas?: string;
-
-  @IsOptional()
-  @IsBoolean()
-  appliesIva?: boolean;
 
   @IsOptional()
   @IsEnum(ProformaStatus)

@@ -4,14 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Customer } from '../customers/entities/customer.entity';
 import { Profile } from '../profiles/entities/profile.entity';
 import { CreateProformaDto } from './dto/create-proforma.dto';
-import { ImportPreviewDto } from './dto/import-preview.dto';
-import { ImportPreviewResult } from './dto/import-preview-result.dto';
 import { NextIdResponse } from './dto/next-id-response.dto';
 import { SyncProformasResult } from './dto/sync-result.dto';
 import { UpdateProformaDto } from './dto/update-proforma.dto';
@@ -33,13 +30,7 @@ export class ProformasService {
     private readonly profileRepository: Repository<Profile>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
-    private readonly configService: ConfigService,
   ) {}
-
-  /** Obtiene la tasa de IVA configurable desde variables de entorno */
-  private getIvaRate(): number {
-    return Number(this.configService.get<string>('IVA_RATE', '0.15'));
-  }
 
   /** Relaciones estándar para respuestas completas al frontend */
   private readonly defaultRelations = ['detalles', 'profile', 'customer'] as const;
@@ -78,25 +69,6 @@ export class ProformasService {
   }
 
   /**
-   * Previsualiza rubros importados desde Excel recalculando totales en servidor.
-   * No persiste datos; retorna estructura lista para confirmación del usuario.
-   */
-  previewImport(dto: ImportPreviewDto): ImportPreviewResult {
-    const ivaRate = this.getIvaRate();
-    const calculated = calculateProformaTotals(
-      dto.rubros,
-      dto.appliesIva,
-      ivaRate,
-    );
-
-    return {
-      appliesIva: dto.appliesIva,
-      ivaRate,
-      ...calculated,
-    };
-  }
-
-  /**
    * Crea una proforma recalculando todos los totales en el servidor.
    * Permite ID manual, pero rechaza duplicados en registros exportados.
    */
@@ -104,25 +76,21 @@ export class ProformasService {
     await this.validateReferences(dto.profileId, dto.customerId);
     await this.assertIdAvailableForCreate(dto.idProforma);
 
-    const calculated = calculateProformaTotals(
-      dto.detalles,
-      dto.appliesIva,
-      this.getIvaRate(),
-    );
+    const calculated = calculateProformaTotals(dto.detalles);
 
     const proforma = this.proformaRepository.create({
       idProforma: dto.idProforma,
       nombreProyecto: dto.nombreProyecto,
-      tiempoEjecucion: dto.tiempoEjecucion ?? null,
+      tiempoEjecucion: calculated.tiempoEjecucion,
       fecha: dto.fecha,
-      notas: dto.notas ?? null,
-      appliesIva: dto.appliesIva,
+      notas: null,
       status: dto.status ?? ProformaStatus.DRAFT,
       profileId: dto.profileId,
       customerId: dto.customerId,
       subtotal: calculated.subtotal,
       iva: calculated.iva,
       totalGeneral: calculated.totalGeneral,
+      montoContrato: calculated.montoContrato,
       detalles: this.mapDetailsToEntities(dto.idProforma, calculated.detalles),
     });
 
@@ -151,34 +119,23 @@ export class ProformasService {
     }
 
     if (dto.nombreProyecto !== undefined) proforma.nombreProyecto = dto.nombreProyecto;
-    if (dto.tiempoEjecucion !== undefined) proforma.tiempoEjecucion = dto.tiempoEjecucion;
     if (dto.fecha !== undefined) proforma.fecha = dto.fecha;
-    if (dto.notas !== undefined) proforma.notas = dto.notas;
-    if (dto.appliesIva !== undefined) proforma.appliesIva = dto.appliesIva;
     if (dto.status !== undefined) proforma.status = dto.status;
     if (dto.profileId !== undefined) proforma.profileId = dto.profileId;
     if (dto.customerId !== undefined) proforma.customerId = dto.customerId;
 
     if (dto.detalles !== undefined) {
-      const calculated = calculateProformaTotals(
-        dto.detalles,
-        proforma.appliesIva,
-        this.getIvaRate(),
-      );
+      const calculated = calculateProformaTotals(dto.detalles);
 
       proforma.subtotal = calculated.subtotal;
       proforma.iva = calculated.iva;
       proforma.totalGeneral = calculated.totalGeneral;
+      proforma.montoContrato = calculated.montoContrato;
+      proforma.tiempoEjecucion = calculated.tiempoEjecucion;
 
       // Reemplazo completo de líneas con cascade
       await this.proformaDetailRepository.delete({ proformaId: idProforma });
       proforma.detalles = this.mapDetailsToEntities(idProforma, calculated.detalles);
-    } else if (dto.appliesIva !== undefined) {
-      // Si solo cambió el flag de IVA, recalcular con las líneas actuales
-      const recalculated = this.recalculateFromExistingDetails(proforma);
-      proforma.subtotal = recalculated.subtotal;
-      proforma.iva = recalculated.iva;
-      proforma.totalGeneral = recalculated.totalGeneral;
     }
 
     await this.proformaRepository.save(proforma);
@@ -194,31 +151,22 @@ export class ProformasService {
     const { suggestedId } = await this.getNextSuggestedId();
 
     const calculated = calculateProformaTotals(
-      source.detalles.map((linea) => ({
-        codigo: linea.codigo ?? undefined,
-        descripcion: linea.descripcion,
-        tiempo: linea.tiempo ?? undefined,
-        unidad: linea.unidad,
-        cantidad: linea.cantidad,
-        costoUnitario: linea.costoUnitario,
-      })),
-      source.appliesIva,
-      this.getIvaRate(),
+      source.detalles.map((linea) => this.mapEntityDetailToDto(linea)),
     );
 
     const clone = this.proformaRepository.create({
       idProforma: suggestedId,
       nombreProyecto: `${source.nombreProyecto} (copia)`,
-      tiempoEjecucion: source.tiempoEjecucion,
+      tiempoEjecucion: calculated.tiempoEjecucion,
       fecha: new Date().toISOString().slice(0, 10),
       notas: source.notas,
-      appliesIva: source.appliesIva,
       status: ProformaStatus.DRAFT,
       profileId: source.profileId,
       customerId: source.customerId,
       subtotal: calculated.subtotal,
       iva: calculated.iva,
       totalGeneral: calculated.totalGeneral,
+      montoContrato: calculated.montoContrato,
       detalles: this.mapDetailsToEntities(suggestedId, calculated.detalles),
     });
 
@@ -250,10 +198,7 @@ export class ProformasService {
         } else {
           proforma = await this.update(dto.idProforma, {
             nombreProyecto: dto.nombreProyecto,
-            tiempoEjecucion: dto.tiempoEjecucion,
             fecha: dto.fecha,
-            notas: dto.notas,
-            appliesIva: dto.appliesIva,
             status: dto.status,
             profileId: dto.profileId,
             customerId: dto.customerId,
@@ -329,6 +274,20 @@ export class ProformasService {
     throw new ConflictException(`El ID "${idProforma}" ya está en uso`);
   }
 
+  /** Mapea una entidad de detalle al DTO usado por el calculador. */
+  private mapEntityDetailToDto(linea: ProformaDetail): CreateProformaDetailDto {
+    return {
+      codigo: linea.codigo ?? undefined,
+      descripcion: linea.descripcion,
+      tiempo: linea.tiempo ?? undefined,
+      unidad: linea.unidad,
+      cantidad: linea.cantidad,
+      costoUnitario: linea.costoUnitario,
+      diasLaborables: linea.diasLaborables,
+      ivaPercentage: linea.ivaPercentage,
+    };
+  }
+
   /** Mapea DTOs calculados a entidades de detalle listas para persistir */
   private mapDetailsToEntities(
     proformaId: string,
@@ -344,23 +303,9 @@ export class ProformasService {
         cantidad: linea.cantidad,
         costoUnitario: linea.costoUnitario,
         total: linea.total,
+        diasLaborables: linea.diasLaborables,
+        ivaPercentage: linea.ivaPercentage,
       }),
-    );
-  }
-
-  /** Recalcula totales a partir de las líneas ya cargadas en memoria */
-  private recalculateFromExistingDetails(proforma: Proforma) {
-    return calculateProformaTotals(
-      proforma.detalles.map((linea) => ({
-        codigo: linea.codigo ?? undefined,
-        descripcion: linea.descripcion,
-        tiempo: linea.tiempo ?? undefined,
-        unidad: linea.unidad,
-        cantidad: linea.cantidad,
-        costoUnitario: linea.costoUnitario,
-      })),
-      proforma.appliesIva,
-      this.getIvaRate(),
     );
   }
 

@@ -22,7 +22,7 @@ Variables disponibles:
 |----------|-------------|---------|
 | `VITE_API_BASE_URL` | URL base del API | `/api` (dev con proxy) o `http://localhost:3000/api` |
 | `VITE_API_KEY` | Clave enviada en header `X-API-KEY` | `construproformas-dev-key` |
-| `VITE_ACCESS_PIN` | PIN de acceso del lado del cliente (no es login del backend) | `1234` |
+| `VITE_ACCESS_PIN` | PIN de acceso del lado del cliente (no es login del backend) | `2585` |
 
 ### Desarrollo local (recomendado)
 
@@ -66,7 +66,7 @@ npm run build
 Salida en `dist/`:
 
 - `index.html` — SPA
-- `assets/` — JS/CSS (incluye chunk separado de `xlsx` para importación Excel)
+- `assets/` — JS/CSS empaquetados
 - `manifest.webmanifest` — PWA
 - `sw.js` — Service worker (cache de interfaz)
 
@@ -84,12 +84,40 @@ Sirva el contenido de `dist/` con cualquier servidor estático (nginx, Caddy, NA
 
 ## Funcionalidades principales
 
-- Nueva proforma, edición y historial
-- Catálogo de rubros con autocompletado
-- Perfiles y clientes
-- Exportar PDF/Excel, clonar
-- Importar proforma anterior desde `.xlsx` institucional
-- PWA instalable + borradores offline sincronizados con `POST /proformas/sync`
+| Módulo | Ruta | Descripción |
+|--------|------|-------------|
+| Nueva proforma | `/proformas/nueva` | Cabecera, búsqueda de cliente, selector de perfil emisor (solo lectura en servidor), detalle de rubros |
+| Historial | `/proformas` | Listado, exportar PDF/Excel, clonar, editar borradores |
+| Edición | `/proformas/:id/editar` | Borrador editable o vista solo lectura si está exportada |
+| Catálogo | `/catalogo` | CRUD de rubros con categoría, días laborables e IVA % |
+| Categorías | `/categorias` | CRUD de categorías de rubros |
+| Clientes | `/clientes` | Alta, edición y búsqueda de clientes |
+
+**No incluido en V2 (frontend):**
+
+- Importación de proformas desde Excel
+- Gestión CRUD de perfiles emisor (solo selector con los dos perfiles fijos del backend)
+- Campo de notas / condiciones comerciales en la proforma
+
+**Cálculos del servidor:** subtotal sin IVA, IVA total, total con IVA, tiempo de ejecución (Σ días laborables) y monto del contrato los calcula el backend al guardar. El cliente muestra esos valores en solo lectura; no los envía en `POST`/`PATCH`.
+
+**IVA por línea:** cada rubro del detalle lleva `diasLaborables` e `ivaPercentage` editables por proforma (heredados del catálogo al agregar).
+
+**PWA + offline:** borradores encolados en IndexedDB y sincronizados con `POST /proformas/sync` al recuperar conexión.
+
+## Flujo recomendado (QA manual)
+
+1. **Cliente** — `/clientes`: crear cliente con nombre, RUC/cédula, dirección y teléfono.
+2. **Categoría** — `/categorias`: crear categoría (nombre único).
+3. **Rubro** — `/catalogo`: crear rubro con categoría, días laborables e IVA %.
+4. **Proforma** — `/proformas/nueva`:
+   - Buscar el cliente (`GET /customers/search?q=`)
+   - Seleccionar perfil emisor (`GET /profiles`)
+   - Agregar rubros desde autocompletado (heredan días e IVA %)
+   - Editar días laborables e IVA % por línea si hace falta
+   - Revisar pie de tabla: subtotal, IVA, total con IVA y tiempo (vacíos hasta guardar)
+5. **Guardar** — `POST /proformas` o `PATCH` en edición; totales se actualizan desde la respuesta del servidor.
+6. **Historial** — exportar PDF/Excel, clonar (copia líneas con días e IVA %), editar borrador.
 
 ## Accesibilidad y marca
 
@@ -106,18 +134,23 @@ Ejecute en **móvil** (o DevTools responsive) y en **escritorio**.
 ### Acceso y navegación
 
 - [ ] Pantalla `/acceso` acepta PIN correcto y rechaza PIN incorrecto
-- [ ] Menú inferior (móvil) y sidebar (escritorio) navegan sin depender de hover
+- [ ] Menú inferior (móvil) y sidebar (escritorio): Nueva, Historial, Catálogo, Categorías, Clientes
 - [ ] Indicador de conexión muestra En línea / Sin conexión
+
+### Maestros
+
+- [ ] **Clientes:** crear, editar, buscar por nombre o cédula
+- [ ] **Categorías:** crear, editar, eliminar (409 si tiene rubros)
+- [ ] **Catálogo:** rubro con categoría, días laborables e IVA %
 
 ### Flujo completo de proforma
 
-- [ ] **Crear:** `/proformas/nueva` — ID sugerido, cabecera, cliente, perfil, IVA
-- [ ] **Rubros:** autocompletado catálogo (≥3 caracteres) + línea manual + APU local (toggle por toque)
-- [ ] **Previsualizar totales:** guardar borrador y ver subtotal/IVA/total del servidor
-- [ ] **Guardar:** `POST /proformas` (nueva) o `PATCH` (edición de borrador)
-- [ ] **Exportar:** desde historial, proforma pasa a EXPORTED y muestra rutas de archivos
-- [ ] **Clonar:** plantilla en nueva proforma con ID sugerido
-- [ ] **Importar:** `/proformas/importar` — subir `.xlsx` institucional, vista previa editable, guardar
+- [ ] **Crear:** ID sugerido, proyecto, cliente por búsqueda, perfil emisor (solo selector)
+- [ ] **Rubros:** autocompletado catálogo (≥3 caracteres), línea vacía, APU local opcional por línea
+- [ ] **Días e IVA:** editables por línea; pie de tabla muestra totales del servidor tras guardar
+- [ ] **Guardar:** `POST /proformas` (nueva) o `PATCH` (borrador)
+- [ ] **Exportar:** desde historial → EXPORTED; toast con totales y rutas de archivos
+- [ ] **Clonar:** plantilla en `/proformas/nueva` con líneas (días e IVA % copiados)
 
 ### Offline / PWA
 
@@ -138,8 +171,7 @@ Ejecute en **móvil** (o DevTools responsive) y en **escritorio**.
 
 - [ ] Campos obligatorios muestran error inline + toast
 - [ ] ID duplicado muestra advertencia 409
-- [ ] Excel con formato incorrecto muestra toast de plantilla institucional
-- [ ] PDF/OCR no está soportado (mensaje claro si se intenta otro formato)
+- [ ] Días laborables ≥ 1 e IVA % entre 0 y 100 por línea
 
 ## Estructura relevante
 
@@ -147,7 +179,7 @@ Ejecute en **móvil** (o DevTools responsive) y en **escritorio**.
 src/
 ├── components/     # UI y layout
 ├── context/        # App, borrador, sincronización offline
-├── features/       # proformas, catálogo, perfiles
+├── features/       # proformas, catálogo, categorías, clientes, perfiles (solo lectura)
 ├── pages/          # Rutas por pantalla
 ├── lib/            # API, formato, toasts
 └── types/          # Tipos compartidos
@@ -163,3 +195,5 @@ Content-Type: application/json
 ```
 
 Los totales de proforma siempre deben mostrarse desde la respuesta del servidor, no como cálculo definitivo del cliente.
+
+Payload de proforma (`POST`/`PATCH`): cabecera + `detalles[]` con `diasLaborables` e `ivaPercentage` por línea. **No** enviar `appliesIva`, `montoContrato`, `tiempoEjecucion` ni `notas`.

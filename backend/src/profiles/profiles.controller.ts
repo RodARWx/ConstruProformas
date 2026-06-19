@@ -1,18 +1,11 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-} from '@nestjs/common';
-import { CreateProfileDto } from './dto/create-profile.dto';
-import { UpdateProfileDto } from './dto/update-profile.dto';
+import { Controller, Get, Param, ParseIntPipe } from '@nestjs/common';
 import { Profile } from './entities/profile.entity';
 import { ProfilesService } from './profiles.service';
 
+/**
+ * Perfiles oficiales de Construmétrica: solo lectura.
+ * POST/PATCH/DELETE están deshabilitados; los datos se siembran al arranque.
+ */
 @Controller('profiles')
 export class ProfilesController {
   constructor(private readonly profilesService: ProfilesService) {}
@@ -25,23 +18,5 @@ export class ProfilesController {
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number): Promise<Profile> {
     return this.profilesService.findOne(id);
-  }
-
-  @Post()
-  create(@Body() dto: CreateProfileDto): Promise<Profile> {
-    return this.profilesService.create(dto);
-  }
-
-  @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateProfileDto,
-  ): Promise<Profile> {
-    return this.profilesService.update(id, dto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number): Promise<void> {
-    return this.profilesService.remove(id);
   }
 }

@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
+import { ListCatalogQueryDto } from './dto/list-catalog-query.dto';
 import { SearchCatalogQueryDto } from './dto/search-catalog-query.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 import { ItemCatalog } from './entities/item-catalog.entity';
@@ -20,8 +21,8 @@ export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   @Get()
-  findAll(): Promise<ItemCatalog[]> {
-    return this.catalogService.findAll();
+  findAll(@Query() query: ListCatalogQueryDto): Promise<ItemCatalog[]> {
+    return this.catalogService.findAll(query.categoriaNombre);
   }
 
   /**
@@ -30,7 +31,11 @@ export class CatalogController {
    */
   @Get('search')
   search(@Query() query: SearchCatalogQueryDto): Promise<ItemCatalog[]> {
-    return this.catalogService.searchByText(query.q, query.limit);
+    return this.catalogService.searchByText(
+      query.q,
+      query.limit,
+      query.categoriaNombre,
+    );
   }
 
   @Get(':id')

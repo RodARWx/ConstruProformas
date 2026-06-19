@@ -1,5 +1,9 @@
 import { type FormEvent, useEffect, useState } from 'react'
-import { Button, Card, Input } from '../../components/ui'
+import { Button, Card, Input, Select } from '../../components/ui'
+import { fetchCategories } from '../categories/categoriesApi'
+import { getApiErrorMessage } from '../../lib/api'
+import { notify } from '../../lib/toast'
+import type { Category } from '../../types/category'
 import type { CatalogItem } from '../../types/catalog'
 import type {
   CreateCatalogItemPayload,
@@ -11,6 +15,9 @@ export interface CatalogFormValues {
   descripcion: string
   unidad: string
   costoUnitario: string
+  categoriaNombre: string
+  diasLaborables: string
+  ivaPercentage: string
 }
 
 const emptyValues: CatalogFormValues = {
@@ -18,6 +25,9 @@ const emptyValues: CatalogFormValues = {
   descripcion: '',
   unidad: '',
   costoUnitario: '',
+  categoriaNombre: '',
+  diasLaborables: '1',
+  ivaPercentage: '15',
 }
 
 interface CatalogFormProps {
@@ -39,6 +49,32 @@ export function CatalogForm({
   const [errors, setErrors] = useState<Partial<Record<keyof CatalogFormValues, string>>>(
     {},
   )
+  const [categories, setCategories] = useState<Category[]>([])
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadCategories() {
+      setIsLoadingCategories(true)
+      try {
+        const data = await fetchCategories()
+        if (!cancelled) setCategories(data)
+      } catch (error) {
+        if (!cancelled) {
+          notify.error('No se pudieron cargar las categorías', getApiErrorMessage(error))
+        }
+      } finally {
+        if (!cancelled) setIsLoadingCategories(false)
+      }
+    }
+
+    void loadCategories()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (editingItem) {
@@ -47,6 +83,9 @@ export function CatalogForm({
         descripcion: editingItem.descripcion,
         unidad: editingItem.unidad,
         costoUnitario: String(editingItem.costoUnitario),
+        categoriaNombre: editingItem.categoriaNombre ?? '',
+        diasLaborables: String(editingItem.diasLaborables ?? 1),
+        ivaPercentage: String(editingItem.ivaPercentage ?? 15),
       })
       setErrors({})
     } else {
@@ -73,6 +112,24 @@ export function CatalogForm({
       }
     }
 
+    if (!values.diasLaborables.trim()) {
+      nextErrors.diasLaborables = 'Los días laborables son obligatorios'
+    } else {
+      const dias = Number(values.diasLaborables)
+      if (!Number.isInteger(dias) || dias < 1) {
+        nextErrors.diasLaborables = 'Ingrese un entero mayor o igual a 1'
+      }
+    }
+
+    if (!values.ivaPercentage.trim()) {
+      nextErrors.ivaPercentage = 'El porcentaje de IVA es obligatorio'
+    } else {
+      const iva = Number(values.ivaPercentage)
+      if (Number.isNaN(iva) || iva < 0 || iva > 100) {
+        nextErrors.ivaPercentage = 'Ingrese un valor entre 0 y 100'
+      }
+    }
+
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
@@ -81,11 +138,14 @@ export function CatalogForm({
     event.preventDefault()
     if (!validate()) return
 
-    const payload = {
+    const payload: CreateCatalogItemPayload = {
       codigoSugerido: values.codigoSugerido.trim() || undefined,
       descripcion: values.descripcion.trim(),
       unidad: values.unidad.trim(),
       costoUnitario: Number(values.costoUnitario),
+      categoriaNombre: values.categoriaNombre.trim() || undefined,
+      diasLaborables: Number(values.diasLaborables),
+      ivaPercentage: Number(values.ivaPercentage),
     }
 
     await onSubmit(payload)
@@ -94,6 +154,11 @@ export function CatalogForm({
       setErrors({})
     }
   }
+
+  const categoryOptions = categories.map((category) => ({
+    value: category.nombre,
+    label: category.nombre,
+  }))
 
   return (
     <Card>
@@ -118,6 +183,7 @@ export function CatalogForm({
             }))
           }
           hint="Opcional. Se usa como código al insertar en una proforma."
+          disabled={isSubmitting}
         />
 
         <Input
@@ -129,6 +195,7 @@ export function CatalogForm({
           }
           error={errors.unidad}
           required
+          disabled={isSubmitting}
         />
 
         <div className="sm:col-span-2">
@@ -144,8 +211,26 @@ export function CatalogForm({
             }
             error={errors.descripcion}
             required
+            disabled={isSubmitting}
           />
         </div>
+
+        <Select
+          label="Categoría"
+          placeholder={
+            isLoadingCategories ? 'Cargando categorías…' : 'Sin categoría'
+          }
+          options={categoryOptions}
+          value={values.categoriaNombre}
+          onChange={(event) =>
+            setValues((current) => ({
+              ...current,
+              categoriaNombre: event.target.value,
+            }))
+          }
+          disabled={isSubmitting || isLoadingCategories}
+          hint="Opcional. Agrupa el rubro en la pantalla de categorías."
+        />
 
         <Input
           label="Costo unitario"
@@ -163,6 +248,48 @@ export function CatalogForm({
           }
           error={errors.costoUnitario}
           required
+          disabled={isSubmitting}
+        />
+
+        <Input
+          label="Días laborables"
+          type="number"
+          min="1"
+          step="1"
+          inputMode="numeric"
+          placeholder="1"
+          value={values.diasLaborables}
+          onChange={(event) =>
+            setValues((current) => ({
+              ...current,
+              diasLaborables: event.target.value,
+            }))
+          }
+          error={errors.diasLaborables}
+          required
+          disabled={isSubmitting}
+          hint="Mínimo 1. Referencia para el tiempo de ejecución en proformas."
+        />
+
+        <Input
+          label="IVA aplicable (%)"
+          type="number"
+          min="0"
+          max="100"
+          step="any"
+          inputMode="decimal"
+          placeholder="15"
+          value={values.ivaPercentage}
+          onChange={(event) =>
+            setValues((current) => ({
+              ...current,
+              ivaPercentage: event.target.value,
+            }))
+          }
+          error={errors.ivaPercentage}
+          required
+          disabled={isSubmitting}
+          hint="Por defecto 15. Use 0 para rubros exentos."
         />
 
         <div className="flex flex-wrap items-end gap-3 sm:col-span-2">

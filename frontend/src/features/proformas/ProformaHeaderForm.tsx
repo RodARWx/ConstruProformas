@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Card, Input, Section, Select, Switch, TextArea } from '../../components/ui'
+import { Button, Card, Input, Section, Select } from '../../components/ui'
 import { useProformaDraft } from '../../context/ProformaDraftContext'
-import { fetchCustomers } from '../../features/customers/customersApi'
+import { CustomerAutocomplete } from '../../features/customers/CustomerAutocomplete'
 import {
   checkProformaIdAvailability,
   fetchNextProformaId,
@@ -12,18 +12,20 @@ import { getApiErrorMessage } from '../../lib/api'
 import { notify } from '../../lib/toast'
 import type { Customer } from '../../types/customer'
 import type { Profile } from '../../types/profile'
+import { ProformaServerTotals } from './ProformaServerTotals'
 
 export function ProformaHeaderForm() {
   const {
     header,
     editingProformaId,
+    savedProforma,
+    isDraftSaved,
     isReadOnly,
     headerFieldErrors,
     setHeader,
     setHeaderFieldErrors,
   } = useProformaDraft()
 
-  const [customers, setCustomers] = useState<Customer[]>([])
   const [profiles, setProfiles] = useState<Profile[]>([])
   const [isLoadingRefs, setIsLoadingRefs] = useState(true)
   const [isCheckingId, setIsCheckingId] = useState(false)
@@ -44,39 +46,23 @@ export function ProformaHeaderForm() {
   }, [header.idProforma, header.suggestedId, setHeader])
 
   useEffect(() => {
-    if (editingProformaId) {
-      void Promise.all([fetchCustomers(), fetchProfiles()])
-        .then(([customerList, profileList]) => {
-          setCustomers(customerList)
-          setProfiles(profileList)
-        })
-        .catch((error) => {
-          notify.error('Error al cargar datos', getApiErrorMessage(error))
-        })
-        .finally(() => setIsLoadingRefs(false))
-      return
-    }
-
     let cancelled = false
 
     async function loadReferences() {
       setIsLoadingRefs(true)
       try {
-        const [customerList, profileList, nextId] = await Promise.all([
-          fetchCustomers(),
-          fetchProfiles(),
-          fetchNextProformaId(),
-        ])
-
+        const profileList = await fetchProfiles()
         if (cancelled) return
-
-        setCustomers(customerList)
         setProfiles(profileList)
 
-        setHeader((current) => ({
-          suggestedId: nextId.suggestedId,
-          idProforma: current.idProforma || nextId.suggestedId,
-        }))
+        if (!editingProformaId) {
+          const nextId = await fetchNextProformaId()
+          if (cancelled) return
+          setHeader((current) => ({
+            suggestedId: nextId.suggestedId,
+            idProforma: current.idProforma || nextId.suggestedId,
+          }))
+        }
       } catch (error) {
         if (!cancelled) {
           notify.error('Error al cargar datos', getApiErrorMessage(error))
@@ -94,26 +80,20 @@ export function ProformaHeaderForm() {
   }, [editingProformaId, setHeader])
 
   const applyCustomer = useCallback(
-    (customerId: string) => {
-      const selected = customers.find((item) => String(item.id) === customerId)
-      if (!selected) {
-        setHeader({
-          customerId: '',
-          nombreCliente: '',
-          rucCedula: '',
-          direccion: '',
-        })
-        return
-      }
-
+    (customer: Customer) => {
       setHeader({
-        customerId: selected.id,
-        nombreCliente: selected.nombreCliente,
-        rucCedula: selected.rucCedula,
-        direccion: selected.direccion ?? '',
+        customerId: customer.id,
+        nombreCliente: customer.nombreCliente,
+        rucCedula: customer.rucCedula,
+        direccion: customer.direccion ?? '',
+        telefonoCliente: customer.telefono ?? '',
+      })
+      setHeaderFieldErrors({
+        ...headerFieldErrors,
+        customerId: undefined,
       })
     },
-    [customers, setHeader],
+    [headerFieldErrors, setHeader, setHeaderFieldErrors],
   )
 
   const verifyIdAvailability = useCallback(
@@ -161,6 +141,12 @@ export function ProformaHeaderForm() {
 
   const selectedProfile = profiles.find((item) => item.id === header.profileId)
   const idError = headerFieldErrors.idProforma ?? idConflictMessage
+  const totalsAreStale = Boolean(savedProforma) && !isDraftSaved
+
+  const selectedCustomerHint =
+    header.customerId && header.nombreCliente
+      ? { nombreCliente: header.nombreCliente, rucCedula: header.rucCedula }
+      : null
 
   return (
     <div className="space-y-8">
@@ -221,80 +207,50 @@ export function ProformaHeaderForm() {
               />
             </div>
 
-            <Select
-              label="Cliente"
-              placeholder={
-                isLoadingRefs ? 'Cargando clientes…' : 'Seleccione un cliente'
-              }
-              value={header.customerId ? String(header.customerId) : ''}
-              onChange={(event) => applyCustomer(event.target.value)}
-              options={customers.map((customer) => ({
-                value: String(customer.id),
-                label: customer.nombreCliente,
-              }))}
-              error={headerFieldErrors.customerId}
-              required
-              disabled={disabled}
+            <div className="sm:col-span-2">
+              <CustomerAutocomplete
+                label="Buscar cliente"
+                placeholder="Nombre o cédula/RUC…"
+                disabled={disabled}
+                error={headerFieldErrors.customerId}
+                selectedCustomer={selectedCustomerHint}
+                onSelect={applyCustomer}
+              />
+            </div>
+
+            <Input
+              label="Nombre del cliente"
+              value={header.nombreCliente}
+              error={headerFieldErrors.nombreCliente}
+              hint="Solo lectura. Edite en /clientes."
+              disabled
+              readOnly
             />
 
             <Input
               label="RUC / Cédula"
               value={header.rucCedula}
-              onChange={(event) => setHeader({ rucCedula: event.target.value })}
               error={headerFieldErrors.rucCedula}
-              hint="Se completa al elegir un cliente del catálogo."
-              required
-              disabled={disabled}
-            />
-
-            <div className="sm:col-span-2">
-              <Input
-                label="Dirección"
-                value={header.direccion}
-                onChange={(event) => setHeader({ direccion: event.target.value })}
-                error={headerFieldErrors.direccion}
-                required
-                disabled={disabled}
-              />
-            </div>
-          </div>
-        </Card>
-      </Section>
-
-      <Section title="Condiciones comerciales">
-        <Card>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Input
-              label="Monto del contrato"
-              type="number"
-              min="0"
-              step="any"
-              inputMode="decimal"
-              placeholder="0"
-              value={header.montoContrato}
-              onChange={(event) =>
-                setHeader({ montoContrato: event.target.value })
-              }
-              error={headerFieldErrors.montoContrato}
-              hint="Solo en el frontend; no se envía al backend."
-              required
-              disabled={disabled}
+              hint="Solo lectura. Edite en /clientes."
+              disabled
+              readOnly
             />
 
             <Input
-              label="Tiempo de ejecución (días)"
-              type="number"
-              min="1"
-              step="1"
-              inputMode="numeric"
-              placeholder="Ej. 30"
-              value={header.tiempoEjecucion}
-              onChange={(event) =>
-                setHeader({ tiempoEjecucion: event.target.value })
-              }
-              error={headerFieldErrors.tiempoEjecucion}
-              required
-              disabled={disabled}
+              label="Teléfono"
+              value={header.telefonoCliente}
+              hint="Solo lectura. Edite en /clientes."
+              disabled
+              readOnly
+            />
+
+            <Input
+              label="Dirección"
+              value={header.direccion}
+              error={headerFieldErrors.direccion}
+              hint="Solo lectura. Edite en /clientes."
+              disabled
+              readOnly
             />
 
             <Input
@@ -306,21 +262,26 @@ export function ProformaHeaderForm() {
               required
               disabled={disabled}
             />
-
-            <div className="sm:col-span-2">
-              <TextArea
-                label="Notas y condiciones"
-                placeholder="Validez de la oferta, garantías, observaciones…"
-                value={header.notas}
-                onChange={(event) => setHeader({ notas: event.target.value })}
-                disabled={disabled}
-              />
-            </div>
           </div>
         </Card>
       </Section>
 
-      <Section title="Emisor e impuestos">
+      <Section
+        title="Totales del documento"
+        description="Subtotal, IVA, total con IVA y tiempo de ejecución los calcula el servidor al guardar."
+      >
+        <Card>
+          <ProformaServerTotals
+            proforma={savedProforma}
+            stale={totalsAreStale}
+          />
+        </Card>
+      </Section>
+
+      <Section
+        title="Perfil emisor"
+        description="Perfiles oficiales de Construmétrica (solo lectura en el servidor)."
+      >
         <Card>
           <div className="grid gap-5 sm:grid-cols-2">
             <Select
@@ -363,18 +324,6 @@ export function ProformaHeaderForm() {
                 )}
               </div>
             )}
-
-            <div className="sm:col-span-2">
-              <Switch
-                label="Aplica IVA"
-                hint="El backend recalculará el IVA al guardar la proforma completa."
-                checked={header.appliesIva}
-                onChange={(event) =>
-                  setHeader({ appliesIva: event.target.checked })
-                }
-                disabled={disabled}
-              />
-            </div>
           </div>
         </Card>
       </Section>

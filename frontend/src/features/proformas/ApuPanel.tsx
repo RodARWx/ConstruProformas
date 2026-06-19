@@ -41,25 +41,28 @@ export function ApuPanel({
         onClick={() => setIsOpen((current) => !current)}
         disabled={disabled}
       >
-        {isOpen ? 'Ocultar' : 'Ver'} análisis de precio unitario (APU local)
+        {isOpen ? 'Ocultar' : 'Ver'} calculadora APU local (costo unitario)
       </button>
 
       {isOpen && (
         <div id={`apu-panel-${lineId}`} className="mt-4 space-y-4">
           <p className="text-xs text-brand-gray/70">
-            Calculadora auxiliar del cliente. Estos valores no se envían al servidor
-            hasta confirmar si el backend los persistirá.
+            Calculadora auxiliar para estimar el <strong>costo unitario</strong> a partir
+            de componentes. No se envía al servidor. Es distinta de la columna{' '}
+            <strong>«Días lab.»</strong> de la tabla: esos días suman el tiempo de
+            ejecución del proyecto; el <strong>rendimiento</strong> del APU solo divide
+            el costo directo para obtener un precio unitario sugerido.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <Input
-              label="Rendimiento"
+              label="Rendimiento (APU)"
               type="number"
               min="0"
               step="any"
               value={apu.rendimiento}
               onChange={(event) => updateField('rendimiento', event.target.value)}
-              hint="Si es mayor a 0, divide el costo directo entre este valor."
+              hint="Factor de productividad del APU, no es «días laborables» del rubro."
               disabled={disabled}
             />
             <Input

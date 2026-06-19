@@ -70,7 +70,7 @@ const rubroColumns: TableColumn<DemoRubroRow>[] = [
 export function DesignSystemDemoPage() {
   const [proyecto, setProyecto] = useState('')
   const [perfil, setPerfil] = useState('')
-  const [notas, setNotas] = useState('')
+  const [descripcion, setDescripcion] = useState('')
   const [showErrors, setShowErrors] = useState(false)
 
   return (
@@ -138,11 +138,11 @@ export function DesignSystemDemoPage() {
 
             <div className="mt-5">
               <TextArea
-                label="Notas y condiciones"
-                placeholder="Validez de la oferta, garantías, observaciones…"
-                value={notas}
-                onChange={(event) => setNotas(event.target.value)}
-                hint="Texto libre para condiciones comerciales de la proforma."
+                label="Descripción (demo)"
+                placeholder="Ejemplo de campo multilínea para componentes UI…"
+                value={descripcion}
+                onChange={(event) => setDescripcion(event.target.value)}
+                hint="Solo demostración del componente TextArea."
               />
             </div>
 

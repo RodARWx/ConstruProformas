@@ -23,20 +23,6 @@ export function validateProformaHeader(
   if (!draft.rucCedula.trim()) {
     errors.rucCedula = 'El RUC/Cédula es obligatorio'
   }
-  if (!draft.direccion.trim()) {
-    errors.direccion = 'La dirección es obligatoria'
-  }
-  if (!draft.montoContrato.trim()) {
-    errors.montoContrato = 'El monto del contrato es obligatorio'
-  } else if (
-    Number.isNaN(Number(draft.montoContrato)) ||
-    Number(draft.montoContrato) < 0
-  ) {
-    errors.montoContrato = 'Ingrese un monto válido mayor o igual a 0'
-  }
-  if (!draft.tiempoEjecucion.trim()) {
-    errors.tiempoEjecucion = 'El tiempo de ejecución es obligatorio'
-  }
   if (!draft.fecha) {
     errors.fecha = 'La fecha es obligatoria'
   }
@@ -64,6 +50,12 @@ export function validateProformaDetalles(detalles: ProformaDetailLine[]): string
     }
     if (line.costoUnitario < 0) {
       return `El costo unitario de la línea ${index + 1} no puede ser negativo`
+    }
+    if (!Number.isInteger(line.diasLaborables) || line.diasLaborables < 1) {
+      return `Los días laborables de la línea ${index + 1} deben ser un entero ≥ 1`
+    }
+    if (line.ivaPercentage < 0 || line.ivaPercentage > 100) {
+      return `El IVA % de la línea ${index + 1} debe estar entre 0 y 100`
     }
   }
 

@@ -29,12 +29,16 @@ export interface ProformaDetailLine {
   localId: string
   codigo: string
   descripcion: string
-  /** Opcional; el backend lo persiste si se envía en el detalle. */
+  /** Opcional; distinto de diasLaborables (tiempo de rubro legacy). */
   tiempo?: string
   unidad: string
   cantidad: number
   costoUnitario: number
-  /** APU auxiliar local; no se envía al backend en fases actuales. */
+  /** Días laborables del rubro en esta proforma; suman el tiempo de ejecución. */
+  diasLaborables: number
+  /** Porcentaje de IVA aplicado a esta línea (0–100). */
+  ivaPercentage: number
+  /** APU auxiliar local; no se envía al backend. */
   apu: ApuBreakdown
 }
 
@@ -51,6 +55,8 @@ export function createDetailLine(
     unidad: partial.unidad ?? '',
     cantidad: partial.cantidad ?? 1,
     costoUnitario: partial.costoUnitario ?? 0,
+    diasLaborables: partial.diasLaborables ?? 1,
+    ivaPercentage: partial.ivaPercentage ?? 15,
     apu: createEmptyApuBreakdown(),
   }
 }

@@ -40,11 +40,19 @@ export function NavIcon({ name, className }: NavIconProps) {
           <path d="M18 17h2" />
         </svg>
       )
-    case 'profiles':
+    case 'categories':
+      return (
+        <svg {...common}>
+          <path d="M4 6h7v7H4zM13 6h7v7h-7zM4 15h7v7H4zM13 15h7v7h-7z" />
+        </svg>
+      )
+    case 'customers':
       return (
         <svg {...common}>
           <path d="M16 11a4 4 0 1 0-8 0" />
           <path d="M4 20a8 8 0 0 1 16 0" />
+          <path d="M12 12a3 3 0 1 0-6 0" />
+          <path d="M4 14a6 6 0 0 1 6-3" />
         </svg>
       )
   }

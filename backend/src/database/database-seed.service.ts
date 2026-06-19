@@ -1,13 +1,18 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Customer } from '../customers/entities/customer.entity';
+import {
+  FIXED_PROFILES,
+  profileMatchesFixed,
+} from '../profiles/fixed-profiles.constant';
 import { Profile } from '../profiles/entities/profile.entity';
+import { Proforma } from '../proformas/entities/proforma.entity';
 
 /**
- * Siembra datos mínimos de prueba al iniciar la aplicación.
- * Garantiza que existan Profile y Customer con id = 1,
- * requeridos por la validación referencial del módulo de proformas.
+ * Siembra datos mínimos al iniciar la aplicación.
+ * Perfiles: exactamente dos registros fijos de Construmétrica (ids 1 y 2).
+ * Cliente id=1: dato de prueba para validación referencial de proformas.
  */
 @Injectable()
 export class DatabaseSeedService implements OnApplicationBootstrap {
@@ -18,29 +23,57 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
     private readonly profileRepository: Repository<Profile>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(Proforma)
+    private readonly proformaRepository: Repository<Proforma>,
   ) {}
 
   async onApplicationBootstrap(): Promise<void> {
-    await this.seedProfile();
+    await this.seedProfiles();
     await this.seedCustomer();
   }
 
-  private async seedProfile(): Promise<void> {
-    const exists = await this.profileRepository.exists({ where: { id: 1 } });
-    if (exists) {
+  /**
+   * Garantiza EXACTAMENTE los dos perfiles oficiales.
+   * Si hay perfiles distintos (p. ej. el de prueba anterior), los elimina
+   * tras reasignar proformas huérfanas al perfil id=1.
+   */
+  private async seedProfiles(): Promise<void> {
+    const existing = await this.profileRepository.find({ order: { id: 'ASC' } });
+
+    const alreadyCanonical =
+      existing.length === FIXED_PROFILES.length &&
+      FIXED_PROFILES.every((expected) => {
+        const found = existing.find((profile) => profile.id === expected.id);
+        return found !== undefined && profileMatchesFixed(found, expected);
+      });
+
+    if (alreadyCanonical) {
       return;
     }
 
-    await this.profileRepository.save({
-      id: 1,
-      nombre: 'Ing. Carlos Métrica',
-      cargo: 'Ingeniero Civil',
-      registroSenescyt: 'SENESCYT-0001',
-      telefono: '0991234567',
-      correo: 'ingeniero@construmetrica.com',
-    });
+    const allowedIds = FIXED_PROFILES.map((profile) => profile.id);
+    const extraProfileIds = existing
+      .map((profile) => profile.id)
+      .filter((id) => !allowedIds.includes(id));
 
-    this.logger.log('Perfil de prueba insertado (id: 1)');
+    if (extraProfileIds.length > 0) {
+      await this.proformaRepository.update(
+        { profileId: In(extraProfileIds) },
+        { profileId: 1 },
+      );
+      await this.profileRepository.delete({ id: In(extraProfileIds) });
+      this.logger.warn(
+        `Perfiles no oficiales eliminados: [${extraProfileIds.join(', ')}]`,
+      );
+    }
+
+    for (const profile of FIXED_PROFILES) {
+      await this.profileRepository.save(profile);
+    }
+
+    this.logger.log(
+      `Perfiles oficiales sincronizados (${FIXED_PROFILES.length} registros, ids 1 y 2)`,
+    );
   }
 
   private async seedCustomer(): Promise<void> {

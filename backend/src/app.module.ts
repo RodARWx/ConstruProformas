@@ -8,6 +8,7 @@ import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { ProfilesModule } from './profiles/profiles.module';
 import { CustomersModule } from './customers/customers.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { CategoriesModule } from './categories/categories.module';
 import { ProformasModule } from './proformas/proformas.module';
 import { DatabaseModule } from './database/database.module';
 import { ExportModule } from './export/export.module';
@@ -24,6 +25,7 @@ import { ExportModule } from './export/export.module';
     DatabaseModule,
     ProfilesModule,
     CustomersModule,
+    CategoriesModule,
     CatalogModule,
     ProformasModule,
     ExportModule,

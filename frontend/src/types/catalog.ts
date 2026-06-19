@@ -5,6 +5,9 @@ export interface CatalogItem {
   descripcion: string
   unidad: string
   costoUnitario: number
+  categoriaNombre?: string | null
+  diasLaborables?: number
+  ivaPercentage?: number
 }
 
 export interface CreateCatalogItemPayload {
@@ -12,6 +15,9 @@ export interface CreateCatalogItemPayload {
   descripcion: string
   unidad: string
   costoUnitario: number
+  categoriaNombre?: string
+  diasLaborables?: number
+  ivaPercentage?: number
 }
 
 export type UpdateCatalogItemPayload = Partial<CreateCatalogItemPayload>
@@ -22,6 +28,9 @@ export interface RubroLineInsert {
   descripcion: string
   unidad: string
   costoUnitario: number
+  categoriaNombre: string | null
+  diasLaborables: number
+  ivaPercentage: number
 }
 
 export function catalogItemToLineInsert(item: CatalogItem): RubroLineInsert {
@@ -30,5 +39,8 @@ export function catalogItemToLineInsert(item: CatalogItem): RubroLineInsert {
     descripcion: item.descripcion,
     unidad: item.unidad,
     costoUnitario: item.costoUnitario,
+    categoriaNombre: item.categoriaNombre ?? null,
+    diasLaborables: item.diasLaborables ?? 1,
+    ivaPercentage: item.ivaPercentage ?? 15,
   }
 }

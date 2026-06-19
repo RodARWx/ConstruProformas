@@ -1,4 +1,4 @@
-export type NavIconName = 'plus' | 'history' | 'catalog' | 'profiles'
+export type NavIconName = 'plus' | 'history' | 'catalog' | 'categories' | 'customers'
 
 export interface NavItem {
   to: string
@@ -29,9 +29,15 @@ export const mainNavItems: NavItem[] = [
     icon: 'catalog',
   },
   {
-    to: '/perfiles',
-    label: 'Perfiles',
-    shortLabel: 'Perfiles',
-    icon: 'profiles',
+    to: '/categorias',
+    label: 'Categorías',
+    shortLabel: 'Categorías',
+    icon: 'categories',
+  },
+  {
+    to: '/clientes',
+    label: 'Clientes',
+    shortLabel: 'Clientes',
+    icon: 'customers',
   },
 ]

@@ -10,6 +10,10 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Customer } from './entities/customer.entity';
 
+/** Límite máximo de resultados para autocompletado en proformas */
+const MAX_SEARCH_RESULTS = 50;
+const DEFAULT_SEARCH_LIMIT = 20;
+
 @Injectable()
 export class CustomersService {
   constructor(
@@ -80,6 +84,29 @@ export class CustomersService {
     }
 
     await this.customerRepository.delete(id);
+  }
+
+  /**
+   * Búsqueda por coincidencia parcial (LIKE) sobre nombre del cliente o RUC/Cédula.
+   * Patrón alineado con GET /catalog/search para selección en Nueva Proforma.
+   */
+  async searchByText(term: string, limit = DEFAULT_SEARCH_LIMIT): Promise<Customer[]> {
+    const normalizedTerm = term.trim();
+
+    if (!normalizedTerm) {
+      return [];
+    }
+
+    const safeLimit = Math.min(Math.max(limit, 1), MAX_SEARCH_RESULTS);
+    const likePattern = `%${normalizedTerm}%`;
+
+    return this.customerRepository
+      .createQueryBuilder('customer')
+      .where('customer.nombreCliente LIKE :term', { term: likePattern })
+      .orWhere('customer.rucCedula LIKE :term', { term: likePattern })
+      .orderBy('customer.nombreCliente', 'ASC')
+      .take(safeLimit)
+      .getMany();
   }
 
   private async assertRucCedulaAvailable(

@@ -7,6 +7,7 @@ import {
   cloneProforma,
   exportProforma,
   fetchNextProformaId,
+  fetchProforma,
   fetchProformas,
 } from '../../features/proformas/proformasApi'
 import { getApiErrorMessage } from '../../lib/api'
@@ -48,11 +49,10 @@ export function ProformaHistoryPage() {
     setActiveId(idProforma)
     try {
       const result = await exportProforma(idProforma)
+      const refreshed = await fetchProforma(idProforma)
       setItems((current) =>
         current.map((item) =>
-          item.idProforma === idProforma
-            ? { ...item, status: 'EXPORTED' as const }
-            : item,
+          item.idProforma === idProforma ? refreshed : item,
         ),
       )
 
@@ -62,7 +62,15 @@ export function ProformaHistoryPage() {
 
       notify.success(
         'Proforma exportada',
-        `Archivos guardados en el repositorio: ${paths || result.exportDirectory}`,
+        [
+          paths || result.exportDirectory,
+          `Subtotal ${formatCurrency(refreshed.subtotal)} · IVA ${formatCurrency(refreshed.iva)} · Total ${formatCurrency(refreshed.totalGeneral)}`,
+          refreshed.tiempoEjecucion
+            ? `Tiempo de ejecución: ${refreshed.tiempoEjecucion} días`
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(' · '),
       )
     } catch (error) {
       notify.error('No se pudo exportar la proforma', getApiErrorMessage(error))
@@ -77,9 +85,18 @@ export function ProformaHistoryPage() {
       const cloned = await cloneProforma(idProforma)
       const { suggestedId } = await fetchNextProformaId()
       loadCloneTemplate(cloned, suggestedId)
+
+      const lineCount = cloned.detalles?.length ?? 0
       notify.success(
         'Proforma clonada',
-        `Plantilla lista para nueva proforma con ID sugerido ${suggestedId}.`,
+        [
+          `Plantilla lista con ID sugerido ${suggestedId}.`,
+          lineCount > 0
+            ? `${lineCount} línea(s) copiadas con días laborables e IVA % por rubro.`
+            : undefined,
+        ]
+          .filter(Boolean)
+          .join(' '),
       )
       await loadHistory()
       navigate('/proformas/nueva')
@@ -125,15 +142,33 @@ export function ProformaHistoryPage() {
     },
     { key: 'fecha', header: 'Fecha', accessor: 'fecha' },
     {
-      key: 'estado',
-      header: 'Estado',
-      render: (row) => (row.status === 'EXPORTED' ? 'Exportada' : 'Borrador'),
+      key: 'subtotal',
+      header: 'Subtotal',
+      numeric: true,
+      render: (row) => formatCurrency(row.subtotal),
+    },
+    {
+      key: 'iva',
+      header: 'IVA',
+      numeric: true,
+      render: (row) => formatCurrency(row.iva),
     },
     {
       key: 'total',
-      header: 'Total',
+      header: 'Total c/ IVA',
       numeric: true,
       render: (row) => formatCurrency(row.totalGeneral),
+    },
+    {
+      key: 'tiempo',
+      header: 'Días',
+      numeric: true,
+      render: (row) => row.tiempoEjecucion?.trim() || '—',
+    },
+    {
+      key: 'estado',
+      header: 'Estado',
+      render: (row) => (row.status === 'EXPORTED' ? 'Exportada' : 'Borrador'),
     },
     {
       key: 'acciones',
@@ -183,16 +218,10 @@ export function ProformaHistoryPage() {
               Historial
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-brand-gray/80">
-              Proformas guardadas en el servidor. Puede exportar, clonar, importar
-              desde Excel y filtrar en cliente por ID, proyecto, cliente y rango de
-              fechas.
+              Proformas guardadas en el servidor. Puede exportar, clonar y filtrar
+              en cliente por ID, proyecto, cliente y rango de fechas.
             </p>
           </div>
-          <Link to="/proformas/importar">
-            <Button type="button" variant="secondary">
-              Importar proforma anterior
-            </Button>
-          </Link>
         </div>
       </header>
 

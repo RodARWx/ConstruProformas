@@ -14,6 +14,7 @@ import {
   validateProformaDetalles,
   validateProformaHeader,
 } from './proformaValidation'
+import { ProformaServerTotals } from './ProformaServerTotals'
 import {
   checkProformaIdAvailability,
   createProforma,
@@ -27,6 +28,7 @@ export function ProformaSaveBar() {
     detalles,
     editingProformaId,
     isReadOnly,
+    savedProforma,
     setHeaderFieldErrors,
     setDetailFieldError,
     setSavedProforma,
@@ -111,9 +113,12 @@ export function ProformaSaveBar() {
 
   if (isReadOnly) {
     return (
-      <p className="text-sm text-brand-gray/80">
-        Esta proforma ya fue exportada y no puede modificarse desde la interfaz.
-      </p>
+      <div className="space-y-4">
+        <ProformaServerTotals proforma={savedProforma} />
+        <p className="text-sm text-brand-gray/80">
+          Esta proforma ya fue exportada y no puede modificarse desde la interfaz.
+        </p>
+      </div>
     )
   }
 

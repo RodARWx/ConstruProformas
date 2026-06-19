@@ -7,7 +7,6 @@ import { notify } from '../../lib/toast'
 import { ProformaDetailTable } from './ProformaDetailTable'
 import { ProformaHeaderForm } from './ProformaHeaderForm'
 import { ProformaSaveBar } from './ProformaSaveBar'
-import { ProformaTotalsPreview } from './ProformaTotalsPreview'
 import { fetchProforma } from './proformasApi'
 
 interface ProformaFormPageProps {
@@ -17,7 +16,7 @@ interface ProformaFormPageProps {
 export function ProformaFormPage({ mode }: ProformaFormPageProps) {
   const { id } = useParams()
   const proformaId = mode === 'edit' ? id : undefined
-  const { isReadOnly, savedProforma, loadFromProforma } = useProformaDraft()
+  const { isReadOnly, loadFromProforma } = useProformaDraft()
   const [isLoading, setIsLoading] = useState(mode === 'edit')
 
   useEffect(() => {
@@ -63,14 +62,6 @@ export function ProformaFormPage({ mode }: ProformaFormPageProps) {
             ? 'Vista de solo lectura: las proformas exportadas no admiten edición.'
             : 'Complete la cabecera y el detalle de rubros, luego guarde el borrador en el servidor.'}
         </p>
-        {mode === 'create' && (
-          <Link
-            to="/proformas/importar"
-            className="app-text-link mt-3 inline-block text-sm"
-          >
-            Importar proforma anterior desde Excel →
-          </Link>
-        )}
         {mode === 'edit' && (
           <Link
             to="/proformas"
@@ -93,7 +84,6 @@ export function ProformaFormPage({ mode }: ProformaFormPageProps) {
       <ProformaHeaderForm />
       <ProformaDetailTable />
       <ProformaSaveBar />
-      {savedProforma && <ProformaTotalsPreview proforma={savedProforma} />}
     </div>
   )
 }

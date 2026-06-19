@@ -1,9 +1,5 @@
 import axios from 'axios'
 import { apiGet, apiPatch, apiPost, isApiConflict } from '../../lib/api'
-import type {
-  ImportPreviewPayload,
-  ImportPreviewResult,
-} from '../../types/import'
 import type { SyncProformasResult } from '../../types/sync'
 import type {
   NextIdResponse,
@@ -54,12 +50,6 @@ export async function exportProforma(
   return apiPost<ProformaExportResult>(
     `/proformas/${encodeURIComponent(idProforma)}/export`,
   )
-}
-
-export async function importPreviewProforma(
-  payload: ImportPreviewPayload,
-): Promise<ImportPreviewResult> {
-  return apiPost<ImportPreviewResult>('/proformas/import-preview', payload)
 }
 
 export async function syncProformas(

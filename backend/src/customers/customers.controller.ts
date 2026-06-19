@@ -7,8 +7,10 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CreateCustomerDto } from './dto/create-customer.dto';
+import { SearchCustomersQueryDto } from './dto/search-customers-query.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { Customer } from './entities/customer.entity';
 import { CustomersService } from './customers.service';
@@ -20,6 +22,15 @@ export class CustomersController {
   @Get()
   findAll(): Promise<Customer[]> {
     return this.customersService.findAll();
+  }
+
+  /**
+   * Búsqueda de clientes: GET /api/customers/search?q=andina&limit=10
+   * Coincidencia parcial en nombreCliente o rucCedula.
+   */
+  @Get('search')
+  search(@Query() query: SearchCustomersQueryDto): Promise<Customer[]> {
+    return this.customersService.searchByText(query.q, query.limit);
   }
 
   @Get(':id')
