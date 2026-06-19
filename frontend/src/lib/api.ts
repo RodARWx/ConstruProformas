@@ -13,6 +13,17 @@ export const apiClient: AxiosInstance = axios.create({
   },
 })
 
+/** Garantiza que la respuesta del backend sea un arreglo (evita pantalla en blanco si la URL apunta al sitio estático). */
+export function ensureArray<T>(data: unknown, resourceLabel: string): T[] {
+  if (Array.isArray(data)) {
+    return data as T[]
+  }
+
+  throw new Error(
+    `Respuesta inválida al cargar ${resourceLabel}. Verifique VITE_API_BASE_URL (debe apuntar al backend con /api).`,
+  )
+}
+
 /** Petición GET tipada sobre el cliente configurado. */
 export async function apiGet<T>(
   path: string,

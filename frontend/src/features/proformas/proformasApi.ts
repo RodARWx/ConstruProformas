@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { apiGet, apiPatch, apiPost, isApiConflict } from '../../lib/api'
+import { apiGet, apiPatch, apiPost, ensureArray, isApiConflict } from '../../lib/api'
 import type { SyncProformasResult } from '../../types/sync'
 import type {
   NextIdResponse,
@@ -13,7 +13,8 @@ import type {
 } from './proformaMappers'
 
 export async function fetchProformas(): Promise<Proforma[]> {
-  return apiGet<Proforma[]>('/proformas')
+  const data = await apiGet<unknown>('/proformas')
+  return ensureArray<Proforma>(data, 'proformas')
 }
 
 export async function fetchProforma(idProforma: string): Promise<Proforma> {

@@ -7,9 +7,10 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { getApiErrorMessage } from '../lib/api'
+import { getApiErrorMessage, ensureArray } from '../lib/api'
 import { notify } from '../lib/toast'
 import type { CreateProformaPayload } from '../features/proformas/proformaMappers'
+import type { SyncItemResult } from '../types/sync'
 import { syncProformas } from '../features/proformas/proformasApi'
 import {
   listOfflineDrafts,
@@ -72,7 +73,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         candidates.map((item) => [item.payload.idProforma, item.localId]),
       )
 
-      for (const result of response.results) {
+      const results = ensureArray<SyncItemResult>(
+        response.results,
+        'resultados de sincronización',
+      )
+      for (const result of results) {
         const localId = byId.get(result.idProforma)
         if (!localId) continue
 
@@ -86,7 +91,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const failedIds = response.results
+      const failedIds = results
         .filter((item) => !item.success)
         .map((item) => item.idProforma)
 

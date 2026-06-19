@@ -20,10 +20,34 @@ function readEnv(key: keyof RuntimeEnv): string {
   return typeof built === 'string' ? built : ''
 }
 
+/**
+ * Normaliza la URL del API para producción.
+ * Acepta: construproformas-api.up.railway.app
+ * Devuelve: https://construproformas-api.up.railway.app/api
+ */
+export function normalizeApiBaseUrl(raw: string): string {
+  let url = raw.trim()
+  if (!url || url === '/api') {
+    return ''
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`
+  }
+
+  url = url.replace(/\/+$/, '')
+
+  if (!url.endsWith('/api')) {
+    url = `${url}/api`
+  }
+
+  return url
+}
+
 export function getApiBaseUrl(): string {
-  const url = readEnv('VITE_API_BASE_URL')
-  if (url) {
-    return url.replace(/\/+$/, '')
+  const normalized = normalizeApiBaseUrl(readEnv('VITE_API_BASE_URL'))
+  if (normalized) {
+    return normalized
   }
   return 'http://localhost:3000/api'
 }
