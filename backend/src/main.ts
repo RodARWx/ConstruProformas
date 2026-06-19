@@ -48,6 +48,18 @@ async function bootstrap() {
   app.useGlobalFilters(new GlobalExceptionFilter());
 
   const port = Number(process.env.PORT) || 3000;
+
+  // Mensaje útil si alguien abre la URL raíz del backend (no es el frontend)
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get('/', (_req: unknown, res: { json: (body: unknown) => void }) => {
+    res.json({
+      status: 'ok',
+      service: 'construproformas-api',
+      message: 'Esta URL es solo la API. Abra la app web en el dominio del frontend.',
+      health: '/api/health',
+    });
+  });
+
   await app.listen(port);
 
   console.log(`Construproformas API escuchando en http://localhost:${port}/api`);
