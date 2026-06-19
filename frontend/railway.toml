@@ -3,5 +3,5 @@ builder = "NIXPACKS"
 buildCommand = "npm ci && npm run build"
 
 [deploy]
-startCommand = "npm run start"
+startCommand = "node scripts/write-env-config.mjs dist && npm run start"
 restartPolicyType = "ON_FAILURE"

@@ -3,10 +3,21 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
-/** Orígenes permitidos para CORS (lista separada por comas o `*`). */
+/** Orígenes permitidos para CORS (lista separada por comas, `*` o vacío en cloud). */
 function resolveCorsOrigin(): boolean | string | string[] {
   const raw = process.env.CORS_ORIGIN?.trim();
   if (!raw) {
+    const isCloud =
+      process.env.NODE_ENV === 'production' ||
+      Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+      Boolean(process.env.RENDER);
+    if (isCloud) {
+      console.warn(
+        'CORS_ORIGIN no definido: se aceptará el origen de cada petición. ' +
+          'Defina CORS_ORIGIN=https://su-frontend para mayor control.',
+      );
+      return true;
+    }
     return false;
   }
   if (raw === '*') {

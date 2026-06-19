@@ -7,7 +7,6 @@ RUN npm ci
 
 COPY . .
 
-# Railway inyecta estas variables en el build (deben existir en el servicio frontend)
 ARG VITE_API_BASE_URL
 ARG VITE_API_KEY
 ARG VITE_ACCESS_PIN
@@ -27,7 +26,10 @@ ENV PORT=3000
 RUN npm install -g serve@14.2.4
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/scripts ./scripts
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "serve -s dist -l tcp://0.0.0.0:${PORT}"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

@@ -1,9 +1,8 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
+import { getApiBaseUrl, getApiKey, isLikelyMisconfiguredApiUrl } from './runtimeEnv'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api'
-
-const API_KEY = import.meta.env.VITE_API_KEY ?? ''
+const API_BASE_URL = getApiBaseUrl()
+const API_KEY = getApiKey()
 
 /** Cliente HTTP centralizado para la API de Construproformas. */
 export const apiClient: AxiosInstance = axios.create({
@@ -61,6 +60,18 @@ export function getApiErrorMessage(error: unknown): string {
     }
     if (typeof data?.message === 'string') {
       return data.message
+    }
+    if (!error.response) {
+      if (isLikelyMisconfiguredApiUrl()) {
+        return (
+          'No se puede conectar con el backend. Configure VITE_API_BASE_URL con la URL ' +
+          'completa del API (ej. https://su-backend.onrender.com/api) y redepliegue el frontend.'
+        )
+      }
+      return (
+        `No se puede conectar con el backend (${API_BASE_URL}). ` +
+        'Verifique que el servicio API esté activo, CORS_ORIGIN incluya esta app y VITE_API_KEY coincida con API_KEY.'
+      )
     }
     if (error.message) {
       return error.message

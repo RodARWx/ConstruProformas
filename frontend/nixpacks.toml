@@ -1,0 +1,13 @@
+# Railway/Nixpacks: solo aplica si Root Directory del servicio = frontend
+
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"

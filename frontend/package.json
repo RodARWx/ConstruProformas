@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && node scripts/write-env-config.mjs",
     "start": "serve -s dist -l tcp://0.0.0.0:${PORT:-4173}",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -1,8 +1,10 @@
+import { getAccessPin as readAccessPinFromEnv } from './runtimeEnv'
+
 export const ACCESS_SESSION_KEY = 'construproformas_access_granted'
 
 /** PIN de acceso definido en VITE_ACCESS_PIN (barrera solo del lado del cliente). */
 export function getAccessPin(): string {
-  return import.meta.env.VITE_ACCESS_PIN ?? ''
+  return readAccessPinFromEnv()
 }
 
 export function isAccessPinConfigured(): boolean {
