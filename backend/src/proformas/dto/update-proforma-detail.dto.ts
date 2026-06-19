@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsNumber,
@@ -51,4 +52,8 @@ export class UpdateProformaDetailDto {
   @Min(0, { message: 'El porcentaje de IVA no puede ser negativo' })
   @Max(100, { message: 'El porcentaje de IVA no puede superar 100' })
   ivaPercentage: number;
+
+  @IsOptional()
+  @IsBoolean({ message: 'esCategoria debe ser un valor booleano' })
+  esCategoria?: boolean;
 }

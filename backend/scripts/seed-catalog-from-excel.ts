@@ -1,19 +1,26 @@
 /**
- * Seed MANUAL del catálogo desde `seed-data/productos.xlsx`.
+ * Seed MANUAL del catálogo desde Excel (.xls o .xlsx).
  *
- * IMPORTANTE: este Excel es solo fuente de carga inicial. Tras ejecutar este script,
- * cualquier edición de unidad, costo, categoría o IVA se hace desde la aplicación
- * (base de datos vía API). No volver a leer el Excel en runtime ni en arranque.
+ * Columnas esperadas: Código, Categoría, Nombre, Porcentaje IVA
+ * - Código → codigoSugerido (ID del rubro)
+ * - Categoría → entidad Category (nombre; descripcion NULL)
+ * - Nombre → descripcion del rubro en catálogo
+ * - IVA → ivaPercentage
+ * - unidad y costoUnitario → estimados por heurística (editables en app)
  *
  * Ejecutar: npm run seed:catalog
+ * Archivo por defecto: seed-data/productos.xls
+ * Override: SEED_EXCEL_PATH=/ruta/al/archivo.xls
  */
 import { existsSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { dirname, extname, join } from 'path';
 import { DatabaseSync } from 'node:sqlite';
 import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import { estimateCatalogDefaults } from './catalog-estimation.helper';
 
-const EXCEL_PATH = join(process.cwd(), 'seed-data', 'productos.xlsx');
+const DEFAULT_EXCEL_PATH = join(process.cwd(), 'seed-data', 'productos.xls');
+const EXCEL_PATH = process.env.SEED_EXCEL_PATH ?? DEFAULT_EXCEL_PATH;
 const DATABASE_PATH =
   process.env.DATABASE_PATH ?? join(process.cwd(), 'data', 'construproformas.db');
 
@@ -43,21 +50,24 @@ function parseIva(value: unknown): number {
   return parsed;
 }
 
-function findHeaderRow(worksheet: ExcelJS.Worksheet): number {
-  for (let rowIndex = 1; rowIndex <= Math.min(worksheet.rowCount, 20); rowIndex += 1) {
-    const row = worksheet.getRow(rowIndex);
-    const colCodigo = normalizeHeader(row.getCell(1).value);
-    const colCategoria = normalizeHeader(row.getCell(2).value);
-    const colNombre = normalizeHeader(row.getCell(3).value);
-    const colIva = normalizeHeader(row.getCell(4).value);
+function isHeaderRow(row: unknown[]): boolean {
+  const colCodigo = normalizeHeader(row[0]);
+  const colCategoria = normalizeHeader(row[1]);
+  const colNombre = normalizeHeader(row[2]);
+  const colIva = normalizeHeader(row[3]);
 
-    if (
-      colCodigo === 'codigo' &&
-      colCategoria === 'categoria' &&
-      colNombre === 'nombre' &&
-      colIva.includes('iva')
-    ) {
-      return rowIndex;
+  return (
+    colCodigo === 'codigo' &&
+    colCategoria === 'categoria' &&
+    colNombre === 'nombre' &&
+    colIva.includes('iva')
+  );
+}
+
+function findHeaderRowIndex(rows: unknown[][]): number {
+  for (let index = 0; index < Math.min(rows.length, 25); index += 1) {
+    if (isHeaderRow(rows[index] ?? [])) {
+      return index;
     }
   }
 
@@ -66,27 +76,14 @@ function findHeaderRow(worksheet: ExcelJS.Worksheet): number {
   );
 }
 
-async function readProductsFromExcel(): Promise<ExcelProductRow[]> {
-  if (!existsSync(EXCEL_PATH)) {
-    throw new Error(`Archivo no encontrado: ${EXCEL_PATH}`);
-  }
-
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(EXCEL_PATH);
-
-  const worksheet = workbook.worksheets[0];
-  if (!worksheet) {
-    throw new Error('El archivo Excel no contiene hojas');
-  }
-
-  const headerRow = findHeaderRow(worksheet);
+function parseProductRows(rows: unknown[][], headerRowIndex: number): ExcelProductRow[] {
   const products: ExcelProductRow[] = [];
 
-  for (let rowIndex = headerRow + 1; rowIndex <= worksheet.rowCount; rowIndex += 1) {
-    const row = worksheet.getRow(rowIndex);
-    const codigoSugerido = String(row.getCell(1).value ?? '').trim();
-    const categoriaNombre = String(row.getCell(2).value ?? '').trim();
-    const descripcion = String(row.getCell(3).value ?? '').trim();
+  for (let rowIndex = headerRowIndex + 1; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex] ?? [];
+    const codigoSugerido = String(row[0] ?? '').trim();
+    const categoriaNombre = String(row[1] ?? '').trim();
+    const descripcion = String(row[2] ?? '').trim();
 
     if (!codigoSugerido && !descripcion) {
       continue;
@@ -94,7 +91,7 @@ async function readProductsFromExcel(): Promise<ExcelProductRow[]> {
 
     if (!codigoSugerido || !categoriaNombre || !descripcion) {
       throw new Error(
-        `Fila ${rowIndex} incompleta: código, categoría y nombre son obligatorios`,
+        `Fila ${rowIndex + 1} incompleta: código, categoría y nombre son obligatorios`,
       );
     }
 
@@ -102,7 +99,7 @@ async function readProductsFromExcel(): Promise<ExcelProductRow[]> {
       codigoSugerido,
       categoriaNombre,
       descripcion,
-      ivaPercentage: parseIva(row.getCell(4).value),
+      ivaPercentage: parseIva(row[3]),
     });
   }
 
@@ -111,6 +108,54 @@ async function readProductsFromExcel(): Promise<ExcelProductRow[]> {
   }
 
   return products;
+}
+
+async function readRowsFromXlsx(filePath: string): Promise<unknown[][]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.readFile(filePath);
+  const worksheet = workbook.worksheets[0];
+  if (!worksheet) {
+    throw new Error('El archivo Excel no contiene hojas');
+  }
+
+  const rows: unknown[][] = [];
+  worksheet.eachRow((row) => {
+    rows.push([
+      row.getCell(1).value,
+      row.getCell(2).value,
+      row.getCell(3).value,
+      row.getCell(4).value,
+    ]);
+  });
+  return rows;
+}
+
+function readRowsFromXls(filePath: string): unknown[][] {
+  const workbook = XLSX.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) {
+    throw new Error('El archivo Excel no contiene hojas');
+  }
+
+  return XLSX.utils.sheet_to_json<unknown[]>(workbook.Sheets[sheetName], {
+    header: 1,
+    defval: '',
+  });
+}
+
+async function readProductsFromExcel(): Promise<ExcelProductRow[]> {
+  if (!existsSync(EXCEL_PATH)) {
+    throw new Error(`Archivo no encontrado: ${EXCEL_PATH}`);
+  }
+
+  const extension = extname(EXCEL_PATH).toLowerCase();
+  const rows =
+    extension === '.xls'
+      ? readRowsFromXls(EXCEL_PATH)
+      : await readRowsFromXlsx(EXCEL_PATH);
+
+  const headerRowIndex = findHeaderRowIndex(rows);
+  return parseProductRows(rows, headerRowIndex);
 }
 
 function tableHasColumn(db: DatabaseSync, table: string, column: string): boolean {
@@ -169,15 +214,11 @@ async function runSeed(): Promise<void> {
 
   const products = await readProductsFromExcel();
 
-  const findCategory = db.prepare(
-    'SELECT nombre FROM categories WHERE nombre = ?',
-  );
+  const findCategory = db.prepare('SELECT nombre FROM categories WHERE nombre = ?');
   const insertCategory = db.prepare(
     'INSERT INTO categories (nombre, descripcion) VALUES (?, NULL)',
   );
-  const findItemByCode = db.prepare(
-    'SELECT id FROM item_catalog WHERE codigoSugerido = ?',
-  );
+  const findItemByCode = db.prepare('SELECT id FROM item_catalog WHERE codigoSugerido = ?');
   const insertItem = db.prepare(`
     INSERT INTO item_catalog (
       codigoSugerido, descripcion, unidad, costoUnitario,
@@ -248,10 +289,6 @@ async function runSeed(): Promise<void> {
   console.log(`Rubros omitidos (codigoSugerido duplicado): ${itemsSkipped}`);
   console.log(`Total categorías en BD: ${totalCategories}`);
   console.log(`Total rubros en BD: ${totalItems}`);
-  console.log('');
-  console.log(
-    'Nota: unidad y costoUnitario fueron estimados para arranque. Edítelos desde la app.',
-  );
 
   db.close();
 }

@@ -18,12 +18,35 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-RUN apk add --no-cache curl
+# LibreOffice headless + fuentes + curl (healthcheck)
+RUN apk add --no-cache \
+    curl \
+    libreoffice \
+    fontconfig \
+    ttf-dejavu \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates
 
-# Reutiliza node_modules ya compilados (better-sqlite3) desde la etapa builder
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 COPY package*.json ./
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY assets ./assets
+
+# Instalar fuentes Gotham para LibreOffice / fontconfig
+RUN mkdir -p /usr/share/fonts/truetype/construmetrica \
+    && if [ -f assets/fonts/Gotham-Black.otf ]; then \
+         cp assets/fonts/Gotham-Black.otf /usr/share/fonts/truetype/construmetrica/; \
+       fi \
+    && if [ -f assets/fonts/Gotham-Book.otf ]; then \
+         cp assets/fonts/Gotham-Book.otf /usr/share/fonts/truetype/construmetrica/; \
+       fi \
+    && fc-cache -f
 
 RUN mkdir -p /app/data
 

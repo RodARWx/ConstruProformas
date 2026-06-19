@@ -285,6 +285,7 @@ export class ProformasService {
       costoUnitario: linea.costoUnitario,
       diasLaborables: linea.diasLaborables,
       ivaPercentage: linea.ivaPercentage,
+      esCategoria: linea.esCategoria ?? undefined,
     };
   }
 
@@ -305,6 +306,7 @@ export class ProformasService {
         total: linea.total,
         diasLaborables: linea.diasLaborables,
         ivaPercentage: linea.ivaPercentage,
+        esCategoria: linea.esCategoria === true,
       }),
     );
   }

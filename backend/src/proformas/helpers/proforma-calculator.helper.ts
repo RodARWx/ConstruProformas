@@ -40,24 +40,37 @@ export function calculateProformaTotals(
   detalles: CreateProformaDetailDto[],
 ): CalculatedProformaTotals {
   const calculatedDetails: CalculatedDetailLine[] = detalles.map((linea) => {
+    const esCategoria = linea.esCategoria === true;
+
+    if (esCategoria) {
+      return {
+        ...linea,
+        esCategoria: true,
+        total: 0,
+        ivaLinea: 0,
+      };
+    }
+
     const total = roundMoney(linea.cantidad * linea.costoUnitario);
     const ivaLinea = roundMoney(total * (linea.ivaPercentage / 100));
 
-    return { ...linea, total, ivaLinea };
+    return { ...linea, esCategoria: false, total, ivaLinea };
   });
 
+  const rubros = calculatedDetails.filter((linea) => !linea.esCategoria);
+
   const subtotal = roundMoney(
-    calculatedDetails.reduce((sum, linea) => sum + linea.total, 0),
+    rubros.reduce((sum, linea) => sum + linea.total, 0),
   );
 
   const iva = roundMoney(
-    calculatedDetails.reduce((sum, linea) => sum + linea.ivaLinea, 0),
+    rubros.reduce((sum, linea) => sum + linea.ivaLinea, 0),
   );
 
   const totalGeneral = roundMoney(subtotal + iva);
   const montoContrato = totalGeneral;
   const tiempoEjecucion = String(
-    calculatedDetails.reduce((sum, linea) => sum + linea.diasLaborables, 0),
+    rubros.reduce((sum, linea) => sum + linea.diasLaborables, 0),
   );
 
   return {

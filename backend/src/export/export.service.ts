@@ -17,8 +17,8 @@ export class ExportService {
   ) {}
 
   /**
-   * Genera archivos de exportación y marca la proforma como EXPORTED.
-   * Los archivos se guardan en {directorio de DATABASE_PATH}/exports/
+   * Genera archivos de exportación institucional y marca la proforma como EXPORTED.
+   * PDF siempre se deriva del Excel (LibreOffice) o fallback HTML/Puppeteer.
    */
   async exportProforma(
     idProforma: string,
@@ -33,16 +33,27 @@ export class ExportService {
       status: proforma.status,
     };
 
+    let xlsxPath: string | undefined;
+
     if (format === 'excel' || format === 'both') {
       result.excel = await this.excelExportService.export(proforma);
+      xlsxPath = result.excel.absolutePath;
     }
 
     if (format === 'pdf' || format === 'both') {
-      result.pdf = await this.pdfExportService.export(proforma);
+      if (!xlsxPath) {
+        result.excel = await this.excelExportService.export(proforma);
+        xlsxPath = result.excel.absolutePath;
+      }
+
+      result.pdf = await this.pdfExportService.exportFromXlsx(proforma, xlsxPath);
+
+      if (format === 'pdf' && result.excel) {
+        delete result.excel;
+      }
     }
 
     await this.proformasService.markAsExported(idProforma);
-
     result.status = ProformaStatus.EXPORTED;
 
     return result;

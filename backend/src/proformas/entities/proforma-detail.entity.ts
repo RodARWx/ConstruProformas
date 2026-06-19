@@ -42,6 +42,10 @@ export class ProformaDetail {
   @Column({ type: 'real', default: 15 })
   ivaPercentage: number;
 
+  /** Fila de categoría (encabezado visual); no suma a totales ni días. */
+  @Column({ type: 'boolean', default: false })
+  esCategoria: boolean;
+
   @ManyToOne(() => Proforma, (proforma) => proforma.detalles, {
     onDelete: 'CASCADE',
     onUpdate: 'CASCADE',

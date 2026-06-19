@@ -156,5 +156,36 @@ describe('proforma-calculator.helper', () => {
       expect(result.totalGeneral).toBe(293.25);
       expect(result.montoContrato).toBe(293.25);
     });
+
+    it('excluye filas de categoría de subtotal, IVA y días', () => {
+      const detalles: CreateProformaDetailDto[] = [
+        {
+          descripcion: 'TOPOGRAFÍA',
+          unidad: '-',
+          cantidad: 0,
+          costoUnitario: 0,
+          diasLaborables: 99,
+          ivaPercentage: 0,
+          esCategoria: true,
+        },
+        {
+          descripcion: 'Rubro real',
+          unidad: 'u',
+          cantidad: 2,
+          costoUnitario: 100,
+          diasLaborables: 5,
+          ivaPercentage: 15,
+        },
+      ];
+
+      const result = calculateProformaTotals(detalles);
+
+      expect(result.subtotal).toBe(200);
+      expect(result.iva).toBe(30);
+      expect(result.totalGeneral).toBe(230);
+      expect(result.tiempoEjecucion).toBe('5');
+      expect(result.detalles[0].total).toBe(0);
+      expect(result.detalles[0].ivaLinea).toBe(0);
+    });
   });
 });
