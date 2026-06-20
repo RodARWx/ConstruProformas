@@ -35,7 +35,7 @@ export interface ProformaLayoutResult {
 }
 
 /**
- * Escribe filas dinámicas de categorías y rubros desde la fila 13.
+ * Escribe filas dinámicas de categorías y rubros desde la fila de inicio configurada.
  * Las categorías ocupan merge A:G; los rubros usan fórmula =E*F en columna G.
  */
 export function buildDynamicItemRows(
@@ -201,6 +201,7 @@ export function buildNotesBlock(
   sheet.mergeCells(`A${row}:G${row}`);
   sheet.getCell(`A${row}`).value = 'NOTAS:';
   sheet.getCell(`A${row}`).font = fontBlack();
+  sheet.getCell(`A${row}`).alignment = { vertical: 'middle' };
   row += 1;
 
   const allNotes = [...INSTITUTIONAL_NOTES];
@@ -213,7 +214,7 @@ export function buildNotesBlock(
     const cell = sheet.getCell(`A${row}`);
     cell.value = note;
     cell.font = fontBookSecondary();
-    cell.alignment = { wrapText: true, vertical: 'top' };
+    cell.alignment = { wrapText: true, vertical: 'middle' };
     sheet.getRow(row).height = Math.max(18, Math.ceil(note.length / 90) * 14);
     row += 1;
   });

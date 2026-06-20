@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { Profile } from '../../profiles/entities/profile.entity';
 
 /** Resuelve la raíz del backend (dist o fuente en desarrollo). */
 export function getBackendRoot(): string {
@@ -47,4 +48,46 @@ export function readLogoBuffer(): Buffer | null {
   }
 
   return readFileSync(logoPath);
+}
+
+/** QR de WhatsApp según el perfil emisor (Mario / Francisco). */
+export function resolveProfileQrPath(profile: Profile): string | null {
+  if (profile.id === 1) {
+    const path = resolveAssetPath('images/qr-mario-lincango.png');
+    return existsSync(path) ? path : null;
+  }
+
+  if (profile.id === 2) {
+    const path = resolveAssetPath('images/qr-francisco-lopez.png');
+    return existsSync(path) ? path : null;
+  }
+
+  const normalized = profile.nombre
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase();
+
+  if (normalized.includes('mario') && normalized.includes('lincango')) {
+    const path = resolveAssetPath('images/qr-mario-lincango.png');
+    return existsSync(path) ? path : null;
+  }
+
+  if (
+    normalized.includes('francisco') &&
+    (normalized.includes('lopez') || normalized.includes('paul'))
+  ) {
+    const path = resolveAssetPath('images/qr-francisco-lopez.png');
+    return existsSync(path) ? path : null;
+  }
+
+  return null;
+}
+
+export function readProfileQrBuffer(profile: Profile): Buffer | null {
+  const qrPath = resolveProfileQrPath(profile);
+  if (!qrPath) {
+    return null;
+  }
+
+  return readFileSync(qrPath);
 }

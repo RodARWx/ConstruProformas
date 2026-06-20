@@ -26,7 +26,7 @@ export const CLIENT_META_LABELS = {
   fecha: 'FECHA',
 } as const;
 
-/** Encabezados de la tabla de rubros (filas 11-12) */
+/** Encabezados de la tabla de rubros (filas 12-13) */
 export const TABLE_HEADERS = {
   row1: {
     codigo: 'CÓDIGO',

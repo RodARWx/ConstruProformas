@@ -1,7 +1,25 @@
 import QRCode from 'qrcode';
+import { Profile } from '../../profiles/entities/profile.entity';
+import { readProfileQrBuffer } from './asset-path.helper';
 
 /**
- * Genera el buffer PNG del código QR de validación de la proforma.
+ * Obtiene el buffer PNG del QR de contacto del perfil emisor.
+ * Usa las imágenes institucionales de WhatsApp; si no hay coincidencia, genera QR de validación.
+ */
+export async function resolveExportQrBuffer(
+  profile: Profile,
+  idProforma: string,
+): Promise<Buffer> {
+  const profileQr = readProfileQrBuffer(profile);
+  if (profileQr) {
+    return profileQr;
+  }
+
+  return generateValidationQrBuffer(idProforma);
+}
+
+/**
+ * Genera el buffer PNG del código QR de validación de la proforma (fallback).
  */
 export async function generateValidationQrBuffer(idProforma: string): Promise<Buffer> {
   const baseUrl =

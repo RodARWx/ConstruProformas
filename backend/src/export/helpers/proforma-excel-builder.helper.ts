@@ -1,6 +1,6 @@
 import * as ExcelJS from 'exceljs';
 import { Proforma } from '../../proformas/entities/proforma.entity';
-import { EXCEL_SHEET_NAME, A4_PAGE_SETUP, BRAND_COLORS_ARGB } from '../constants/brand.constants';
+import { EXCEL_SHEET_NAME, A4_PAGE_SETUP, BRAND_COLORS_ARGB, EXCEL_LAYOUT } from '../constants/brand.constants';
 import {
   CLIENT_META_LABELS,
   INSTITUTIONAL_COMPANY,
@@ -22,7 +22,7 @@ import {
   buildTotalsBlock,
   ProformaLayoutResult,
 } from './proforma-excel-layout.helper';
-import { generateValidationQrBuffer } from './qr-code.helper';
+import { resolveExportQrBuffer } from './qr-code.helper';
 
 export interface ProformaWorkbookResult {
   workbook: ExcelJS.Workbook;
@@ -59,7 +59,7 @@ export async function buildProformaWorkbook(
   buildClientMetadata(sheet, proforma);
   buildTableHeader(sheet);
 
-  const layout = buildDynamicItemRows(sheet, proforma.detalles, 13);
+  const layout = buildDynamicItemRows(sheet, proforma.detalles, EXCEL_LAYOUT.itemsStartRow);
   const afterTotalsRow = buildTotalsBlock(sheet, proforma, layout);
   layout.notesStartRow = afterTotalsRow;
   layout.contactStartRow = buildNotesBlock(sheet, proforma, afterTotalsRow);
@@ -94,6 +94,9 @@ function buildFixedHeader(sheet: ExcelJS.Worksheet, proforma: Proforma): void {
   sheet.getCell('A4').value = `RUC: ${INSTITUTIONAL_COMPANY.ruc}`;
   sheet.getCell('A4').font = fontBook();
   sheet.getCell('A4').alignment = { horizontal: 'center' };
+
+  // Espacio entre datos de empresa y metadatos del cliente (fila 5 vacía en plantilla de referencia)
+  sheet.getRow(EXCEL_LAYOUT.spacerRow).height = 15.5;
 }
 
 function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void {
@@ -106,7 +109,7 @@ function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void
   ];
 
   rows.forEach(([label, value], index) => {
-    const rowNum = 5 + index;
+    const rowNum = EXCEL_LAYOUT.clientMetaStartRow + index;
     sheet.mergeCells(`A${rowNum}:B${rowNum}`);
     sheet.getCell(`A${rowNum}`).value = label;
     sheet.getCell(`A${rowNum}`).font = fontBlack();
@@ -118,14 +121,16 @@ function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void
 
 function buildTableHeader(sheet: ExcelJS.Worksheet): void {
   const headerFill = fillSolid(BRAND_COLORS_ARGB.burgundy);
-  const row11 = sheet.getRow(11);
-  const row12 = sheet.getRow(12);
+  const row1 = EXCEL_LAYOUT.tableHeaderRow1;
+  const row2 = EXCEL_LAYOUT.tableHeaderRow2;
+  const row11 = sheet.getRow(row1);
+  const row12 = sheet.getRow(row2);
 
-  sheet.mergeCells('A11:A12');
-  sheet.mergeCells('B11:B12');
-  sheet.mergeCells('C11:C12');
-  sheet.mergeCells('D11:D12');
-  sheet.mergeCells('E11:G11');
+  sheet.mergeCells(`A${row1}:A${row2}`);
+  sheet.mergeCells(`B${row1}:B${row2}`);
+  sheet.mergeCells(`C${row1}:C${row2}`);
+  sheet.mergeCells(`D${row1}:D${row2}`);
+  sheet.mergeCells(`E${row1}:G${row1}`);
 
   const headers11 = [
     { col: 1, text: TABLE_HEADERS.row1.codigo },
@@ -161,7 +166,7 @@ async function embedImages(
   workbook: ExcelJS.Workbook,
   sheet: ExcelJS.Worksheet,
   proforma: Proforma,
-  afterContactRow: number,
+  contactEndRow: number,
 ): Promise<void> {
   const logoBuffer = readLogoBuffer();
   if (logoBuffer) {
@@ -176,18 +181,22 @@ async function embedImages(
     });
   }
 
-  const qrBuffer = await generateValidationQrBuffer(proforma.idProforma);
+  const qrBuffer = await resolveExportQrBuffer(proforma.profile, proforma.idProforma);
   const qrId = workbook.addImage({
     buffer: qrBuffer as never,
     extension: 'png',
   });
 
-  const qrRow = afterContactRow + 1;
-  sheet.getCell(`A${qrRow}`).value = 'Validación digital';
-  sheet.getCell(`A${qrRow}`).font = fontBook();
+  const { profileQr } = EXCEL_LAYOUT;
+  const lastContactRow = contactEndRow - 1;
+  const qrTopRow =
+    lastContactRow + profileQr.bottomRowOffset - profileQr.heightInRows;
 
   sheet.addImage(qrId, {
-    tl: { col: 5.5, row: qrRow - 1 },
-    ext: { width: 90, height: 90 },
+    tl: { col: profileQr.tlCol, row: qrTopRow },
+    ext: { width: profileQr.sizePx, height: profileQr.sizePx },
   });
+
+  // Reserva fila vacía tras el bloque de contacto (como en plantilla de referencia)
+  sheet.getRow(contactEndRow + 1).height = 15.5;
 }

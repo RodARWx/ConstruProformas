@@ -55,12 +55,9 @@ export function AccessPage() {
       <div className="mx-auto w-full max-w-md text-left">
         <div className="mb-8 flex items-center gap-3">
           <BrandLogo />
-          <div>
-            <p className="font-heading text-sm uppercase tracking-wider text-brand-wine">
-              Construproformas
-            </p>
-            <p className="text-sm text-brand-gray/80">Construmétrica</p>
-          </div>
+          <p className="text-sm font-semibold text-brand-wine sm:text-base">
+            Construproformas
+          </p>
         </div>
 
         <Card>

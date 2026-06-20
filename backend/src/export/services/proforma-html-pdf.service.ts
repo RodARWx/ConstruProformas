@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { writeFile, unlink } from 'fs/promises';
 import puppeteer from 'puppeteer';
 import { Proforma } from '../../proformas/entities/proforma.entity';
-import { generateValidationQrBuffer } from '../helpers/qr-code.helper';
+import { resolveExportQrBuffer } from '../helpers/qr-code.helper';
 import { renderProformaHtml } from '../templates/proforma-pdf.template';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class ProformaHtmlPdfService {
    * Fallback PDF: renderiza plantilla HTML institucional con Puppeteer.
    */
   async renderToPdf(proforma: Proforma, outputPath: string): Promise<void> {
-    const qrBuffer = await generateValidationQrBuffer(proforma.idProforma);
+    const qrBuffer = await resolveExportQrBuffer(proforma.profile, proforma.idProforma);
     const qrDataUrl = `data:image/png;base64,${qrBuffer.toString('base64')}`;
     const html = renderProformaHtml(proforma, qrDataUrl);
 

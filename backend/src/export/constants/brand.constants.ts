@@ -33,6 +33,25 @@ export const BRAND_FONTS = {
 
 export const EXCEL_SHEET_NAME = 'PROFORMA';
 
+/** Filas fijas de la hoja PROFORMA (referencia: CM-PROF-1 - Ejemplo.xlsx). */
+export const EXCEL_LAYOUT = {
+  /** Fila vacía entre datos de empresa (RUC) y metadatos del cliente */
+  spacerRow: 5,
+  clientMetaStartRow: 6,
+  tableHeaderRow1: 12,
+  tableHeaderRow2: 13,
+  itemsStartRow: 14,
+  /** Posición del QR WhatsApp alineado al borde derecho de la tabla (col G) */
+  profileQr: {
+    tlCol: 6.05,
+    sizePx: 90,
+    /** Filas de alto aproximado del QR para alinear el borde inferior con el contacto */
+    heightInRows: 4.6,
+    /** Ajuste fino del borde inferior respecto a la última fila de contacto */
+    bottomRowOffset: 0.92,
+  },
+} as const;
+
 /** Tamaño de fuente institucional para exportaciones (Excel y PDF fallback). */
 export const BRAND_FONT_SIZE = 12;
 
