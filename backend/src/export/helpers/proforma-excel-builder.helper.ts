@@ -1,5 +1,6 @@
 import * as ExcelJS from 'exceljs';
 import { Proforma } from '../../proformas/entities/proforma.entity';
+import { resolveProformaCustomerSnapshot } from '../../proformas/helpers/proforma-customer-snapshot.helper';
 import { EXCEL_SHEET_NAME, A4_PAGE_SETUP, BRAND_COLORS_ARGB, EXCEL_LAYOUT } from '../constants/brand.constants';
 import {
   CLIENT_META_LABELS,
@@ -100,9 +101,10 @@ function buildFixedHeader(sheet: ExcelJS.Worksheet, proforma: Proforma): void {
 }
 
 function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void {
+  const customer = resolveProformaCustomerSnapshot(proforma);
   const rows: [string, string][] = [
-    [CLIENT_META_LABELS.cliente, proforma.customer.nombreCliente],
-    [CLIENT_META_LABELS.ruc, proforma.customer.rucCedula],
+    [CLIENT_META_LABELS.cliente, customer.nombreCliente],
+    [CLIENT_META_LABELS.ruc, customer.rucCedula],
     [CLIENT_META_LABELS.montoContrato, formatCurrency(proforma.montoContrato)],
     [CLIENT_META_LABELS.tiempoEjecucion, proforma.tiempoEjecucion ?? '0'],
     [CLIENT_META_LABELS.fecha, formatDate(proforma.fecha)],

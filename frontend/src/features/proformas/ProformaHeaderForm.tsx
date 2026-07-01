@@ -192,6 +192,19 @@ export function ProformaHeaderForm() {
 
       <Section title="Proyecto y cliente">
         <Card>
+          {!isReadOnly && (
+            <p className="mb-4 text-xs text-brand-gray/75">
+              Los datos del cliente y los rubros se congelan al guardar en el servidor.
+              Cambios posteriores en Clientes o Catálogo no alteran esta proforma hasta
+              que vuelva a guardar el borrador.
+            </p>
+          )}
+          {isReadOnly && (
+            <p className="mb-4 text-xs text-brand-wine/80">
+              Vista congelada: muestra los datos del cliente y rubros al momento de la
+              última exportación o guardado.
+            </p>
+          )}
           <div className="grid gap-5 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Input

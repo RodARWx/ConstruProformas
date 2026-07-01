@@ -19,7 +19,18 @@ Construproformas permite elaborar, guardar, exportar y archivar **proformas de o
 5. **Guardar borrador** en el servidor (estado `DRAFT`).
 6. Cuando esté listo, **exportar** a PDF y Excel desde el historial.
 
-> **Regla:** La proforma no importa clientes ni rubros “en vivo” en cada edición; las líneas guardadas conservan los valores del momento del guardado.
+> **Regla de congelamiento (V2.0.1):** Al **guardar** un borrador, el sistema copia en la proforma los datos del cliente (`clienteNombre`, RUC, dirección, teléfono) y cada línea de rubro con sus valores numéricos. **Cambios posteriores** en *Clientes* o *Catálogo* **no modifican** una proforma ya guardada hasta que el usuario **vuelva a guardar** el borrador. Las proformas **exportadas** quedan congeladas permanentemente.
+
+---
+
+## 2.1. Categorías y catálogo de rubros
+
+| Acción | Comportamiento |
+|--------|----------------|
+| **Eliminar categoría sin rubros** | Se elimina sin error. |
+| **Eliminar categoría con rubros asociados** | **Bloqueado (409).** Debe reasignar los rubros a otra categoría desde *Catálogo* antes de eliminar. |
+| **Editar precio/unidad de un rubro en catálogo** | No altera líneas ya guardadas en proformas existentes. |
+| **Eliminar rubro del catálogo** | No elimina líneas ya guardadas en proformas. |
 
 ---
 
@@ -31,6 +42,8 @@ Construproformas permite elaborar, guardar, exportar y archivar **proformas de o
 | **Motivo** | Evitar que cambios posteriores en clientes o rubros alteren proformas ya entregadas (trazabilidad). |
 | **Qué puede hacer el usuario** | Ver en solo lectura, clonar como nuevo borrador, descargar PDF/Excel generados. |
 | **Qué no puede hacer** | Editar líneas, cambiar totales ni cabecera de una proforma exportada. |
+| **Re-exportar** | Usa los mismos valores congelados (cliente + rubros) del documento; no lee datos vivos del maestro. |
+| **Vista solo lectura** | Muestra el snapshot guardado, no los cambios recientes en *Clientes*. |
 
 En la pantalla de edición, las proformas exportadas muestran un aviso de **solo lectura**.
 
@@ -120,4 +133,5 @@ Costos operativos mensuales (indicativos): Railway + Cloudflare Pages free/low t
 
 | Fecha | Versión | Cambios |
 |-------|---------|---------|
+| 2026-06 | 2.0.1 | Snapshot cliente en proforma, fix eliminar categoría, reglas congelamiento |
 | 2026-06 | 2.0-draft | Reglas exportación, papelera, borrado permanente, alcance NAS/offline, edge cases |

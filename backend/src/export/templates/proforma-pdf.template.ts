@@ -1,4 +1,5 @@
 import { Proforma } from '../../proformas/entities/proforma.entity';
+import { resolveProformaCustomerSnapshot } from '../../proformas/helpers/proforma-customer-snapshot.helper';
 import { BRAND_COLORS, BRAND_FONTS, BRAND_FONT_SIZE } from '../constants/brand.constants';
 import { INSTITUTIONAL_COMPANY, INSTITUTIONAL_NOTES } from '../constants/institutional.constants';
 import { buildEmbeddedFontCss } from '../helpers/brand-fonts.helper';
@@ -37,7 +38,7 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
     .join('\n');
 
   const profile = proforma.profile;
-  const customer = proforma.customer;
+  const customer = resolveProformaCustomerSnapshot(proforma);
 
   return `<!DOCTYPE html>
 <html lang="es">

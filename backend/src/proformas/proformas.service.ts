@@ -16,6 +16,7 @@ import { ProformaDetail } from './entities/proforma-detail.entity';
 import { Proforma } from './entities/proforma.entity';
 import { ProformaStatus } from './enums/proforma-status.enum';
 import { calculateProformaTotals } from './helpers/proforma-calculator.helper';
+import { applyCustomerSnapshotToProforma } from './helpers/proforma-customer-snapshot.helper';
 import { suggestNextProformaId } from './helpers/proforma-id.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
 
@@ -84,6 +85,7 @@ export class ProformasService {
    * Permite ID manual, pero rechaza duplicados en registros exportados.
    */
   async create(dto: CreateProformaDto): Promise<Proforma> {
+    const customer = await this.getCustomerOrFail(dto.customerId);
     await this.validateReferences(dto.profileId, dto.customerId);
     await this.assertIdAvailableForCreate(dto.idProforma);
 
@@ -104,6 +106,8 @@ export class ProformasService {
       montoContrato: calculated.montoContrato,
       detalles: this.mapDetailsToEntities(dto.idProforma, calculated.detalles),
     });
+
+    applyCustomerSnapshotToProforma(proforma, customer);
 
     const saved = await this.proformaRepository.save(proforma);
     return this.findOne(saved.idProforma);
@@ -149,6 +153,9 @@ export class ProformasService {
       proforma.detalles = this.mapDetailsToEntities(idProforma, calculated.detalles);
     }
 
+    const customer = await this.getCustomerOrFail(proforma.customerId);
+    applyCustomerSnapshotToProforma(proforma, customer);
+
     await this.proformaRepository.save(proforma);
     return this.findOne(idProforma);
   }
@@ -174,12 +181,22 @@ export class ProformasService {
       status: ProformaStatus.DRAFT,
       profileId: source.profileId,
       customerId: source.customerId,
+      clienteNombre: source.clienteNombre,
+      clienteRucCedula: source.clienteRucCedula,
+      clienteDireccion: source.clienteDireccion,
+      clienteTelefono: source.clienteTelefono,
+      clienteCorreo: source.clienteCorreo,
       subtotal: calculated.subtotal,
       iva: calculated.iva,
       totalGeneral: calculated.totalGeneral,
       montoContrato: calculated.montoContrato,
       detalles: this.mapDetailsToEntities(suggestedId, calculated.detalles),
     });
+
+    if (!clone.clienteNombre) {
+      const customer = await this.getCustomerOrFail(clone.customerId);
+      applyCustomerSnapshotToProforma(clone, customer);
+    }
 
     const saved = await this.proformaRepository.save(clone);
     return this.findOne(saved.idProforma);
@@ -266,6 +283,18 @@ export class ProformasService {
     if (!customer) {
       throw new NotFoundException(`Cliente con id ${customerId} no encontrado`);
     }
+  }
+
+  private async getCustomerOrFail(customerId: number): Promise<Customer> {
+    const customer = await this.customerRepository.findOne({
+      where: { id: customerId },
+    });
+
+    if (!customer) {
+      throw new NotFoundException(`Cliente con id ${customerId} no encontrado`);
+    }
+
+    return customer;
   }
 
   /**

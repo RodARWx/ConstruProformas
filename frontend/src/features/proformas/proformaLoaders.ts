@@ -4,8 +4,11 @@ import {
   type Proforma,
   type ProformaDraft,
 } from '../../types/proforma'
+import { getProformaCustomerDisplay } from '../../lib/proformaCustomer'
 
 export function proformaToDraft(proforma: Proforma): ProformaDraft {
+  const customer = getProformaCustomerDisplay(proforma)
+
   return {
     header: {
       ...createEmptyHeaderDraft(proforma.idProforma, proforma.fecha),
@@ -13,10 +16,10 @@ export function proformaToDraft(proforma: Proforma): ProformaDraft {
       suggestedId: proforma.idProforma,
       nombreProyecto: proforma.nombreProyecto,
       customerId: proforma.customerId,
-      nombreCliente: proforma.customer?.nombreCliente ?? '',
-      rucCedula: proforma.customer?.rucCedula ?? '',
-      direccion: proforma.customer?.direccion ?? '',
-      telefonoCliente: proforma.customer?.telefono ?? '',
+      nombreCliente: customer.nombreCliente,
+      rucCedula: customer.rucCedula,
+      direccion: customer.direccion,
+      telefonoCliente: customer.telefono,
       fecha: proforma.fecha,
       profileId: proforma.profileId,
     },

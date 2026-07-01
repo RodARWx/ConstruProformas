@@ -32,6 +32,11 @@ export interface Proforma {
   status: ProformaStatus
   profileId: number
   customerId: number
+  clienteNombre?: string | null
+  clienteRucCedula?: string | null
+  clienteDireccion?: string | null
+  clienteTelefono?: string | null
+  clienteCorreo?: string | null
   detalles?: ProformaDetail[]
   profile?: {
     id: number

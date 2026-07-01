@@ -8,6 +8,7 @@ import {
 } from '../../features/proformas/proformasApi'
 import { getApiErrorMessage } from '../../lib/api'
 import { formatCurrency } from '../../lib/format'
+import { getProformaCustomerDisplay } from '../../lib/proformaCustomer'
 import { notify } from '../../lib/toast'
 import type { Proforma } from '../../types/proforma'
 
@@ -79,7 +80,7 @@ export function ProformaTrashPage() {
     {
       key: 'cliente',
       header: 'Cliente',
-      render: (row) => row.customer?.nombreCliente ?? '—',
+      render: (row) => getProformaCustomerDisplay(row).nombreCliente || '—',
     },
     { key: 'fecha', header: 'Fecha', accessor: 'fecha' },
     {

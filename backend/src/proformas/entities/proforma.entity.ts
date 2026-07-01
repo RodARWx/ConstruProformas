@@ -68,6 +68,22 @@ export class Proforma {
   @Column()
   customerId: number;
 
+  /** Snapshot del cliente al guardar (no cambia si se edita el maestro). */
+  @Column({ type: 'text', nullable: true })
+  clienteNombre: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  clienteRucCedula: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  clienteDireccion: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  clienteTelefono: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  clienteCorreo: string | null;
+
   @OneToMany(() => ProformaDetail, (detail) => detail.proforma, {
     cascade: true,
   })

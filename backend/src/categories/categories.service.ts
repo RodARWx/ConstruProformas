@@ -72,17 +72,20 @@ export class CategoriesService {
 
   /**
    * Elimina una categoría solo si no tiene rubros del catálogo asociados.
+   * Si tiene rubros, responde 409: debe reasignarlos antes de eliminar.
    */
   async remove(nombre: string): Promise<void> {
     await this.findOne(nombre);
 
-    const rubrosCount = await this.itemCatalogRepository.count({
-      where: { categoriaNombre: nombre },
-    });
+    const rubrosCount = await this.itemCatalogRepository
+      .createQueryBuilder('item')
+      .where('item.categoriaNombre = :nombre', { nombre })
+      .getCount();
 
     if (rubrosCount > 0) {
       throw new ConflictException(
-        `No se puede eliminar la categoría "${nombre}": tiene ${rubrosCount} rubro(s) asociado(s)`,
+        `No se puede eliminar la categoría "${nombre}": tiene ${rubrosCount} rubro(s) asociado(s). ` +
+          'Reasigne esos rubros a otra categoría desde Catálogo antes de eliminar.',
       );
     }
 

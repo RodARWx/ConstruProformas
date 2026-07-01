@@ -42,10 +42,12 @@ Use la columna **Resultado esperado** como criterio de aceptación en el navegad
 | E5 | ID tras eliminación permanente | Papelera → eliminar permanentemente → `GET next-id` o crear manual | El ID puede reutilizarse; `next-id` no cuenta filas borradas en duro |
 | E6 | Borrar proforma más reciente (ej. CM-PROF-10) y crear otra | Soft delete CM-PROF-10 → `GET next-id` | Sugiere **CM-PROF-11** (no reutiliza 10 mientras esté en papelera) |
 | E7 | Listado con 100+ clientes | `GET /customers` y búsqueda `?q=a&limit=50` | Lista paginada por búsqueda; no bloquea UI si se usa autocomplete con límite |
-| E8 | Eliminar categoría con rubros | `DELETE /categories/{nombre}` con rubros asociados | **409 Conflict**; rubros conservan categoría |
-| E9 | Borrador guardado y cambio de rubro en catálogo | Crear borrador con rubro X → editar precio de X en catálogo → reabrir borrador | El borrador **conserva valores guardados** (snapshot en líneas de detalle) |
-| E10 | Borrador y cambio de datos del cliente | Cambiar teléfono del cliente tras guardar borrador | Cabecera muestra datos al **momento de guardar**; no se recalcula solo |
-| E11 | Proforma exportada y cambio en catálogo/cliente | Exportar → cambiar rubro/cliente → re-exportar o ver PDF | PDF/Excel mantiene **valores congelados** al exportar; estado EXPORTED bloquea edición |
+| E8 | Eliminar categoría con rubros | `DELETE /categories/{nombre}` con rubros asociados | **409 Conflict**; mensaje indica reasignar rubros |
+| E8b | Eliminar categoría vacía | `DELETE /categories/{nombre}` sin rubros | **200** eliminación correcta |
+| E9 | Borrador guardado y cambio de rubro en catálogo | Editar precio en catálogo → reabrir borrador sin guardar | Líneas conservan valores guardados |
+| E10 | Borrador y cambio de cliente | Editar cliente en maestro → reabrir borrador sin guardar | Cabecera muestra snapshot anterior |
+| E10b | Borrador y re-guardar tras cambio cliente | Guardar borrador de nuevo | Snapshot del cliente se actualiza al guardar |
+| E11 | Proforma exportada y cambio en catálogo/cliente | Exportar → cambiar maestros → ver/re-exportar | PDF/Excel y vista usan snapshot congelado |
 | E12 | Rubro sin categoría en proforma | Línea manual sin categoría en detalle | Se muestra descripción/código; sin agrupación de categoría en cabecera de línea |
 | E13 | Proforma con muchas líneas (2+ páginas PDF) | Borrador con 40+ rubros → exportar PDF | PDF multipágina; totales coherentes con calculador backend |
 | E14 | Editar proforma exportada | `PATCH /proformas/{id}` con status EXPORTED | **400 Bad Request** — no editable |

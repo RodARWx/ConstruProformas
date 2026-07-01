@@ -5,7 +5,6 @@ import {
   Index,
   ManyToOne,
   JoinColumn,
-  RelationId,
 } from 'typeorm';
 import { Category } from '../../categories/entities/category.entity';
 
@@ -36,13 +35,14 @@ export class ItemCatalog {
   @Column({ type: 'real', default: 15 })
   ivaPercentage: number;
 
+  /** FK hacia Category.nombre (columna física en SQLite). */
+  @Column({ type: 'text', nullable: true })
+  categoriaNombre: string | null;
+
   @ManyToOne(() => Category, (category) => category.rubros, {
     nullable: true,
     onDelete: 'SET NULL',
   })
   @JoinColumn({ name: 'categoriaNombre', referencedColumnName: 'nombre' })
   categoria: Category | null;
-
-  @RelationId((item: ItemCatalog) => item.categoria)
-  categoriaNombre: string | null;
 }

@@ -54,6 +54,7 @@ export class CatalogService {
       diasLaborables: dto.diasLaborables ?? 1,
       ivaPercentage: dto.ivaPercentage ?? 15,
       categoria,
+      categoriaNombre: categoria?.nombre ?? null,
     });
 
     return this.itemCatalogRepository.save(item);
@@ -75,6 +76,7 @@ export class CatalogService {
 
     if (dto.categoriaNombre !== undefined) {
       item.categoria = await this.resolveCategory(dto.categoriaNombre);
+      item.categoriaNombre = item.categoria?.nombre ?? null;
     }
 
     return this.itemCatalogRepository.save(item);
