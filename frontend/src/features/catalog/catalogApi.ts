@@ -1,12 +1,33 @@
-import { apiDelete, apiGet, apiPatch, apiPost } from '../../lib/api'
+import { apiGet, apiDelete, apiPatch, apiPost } from '../../lib/api'
 import type {
   CatalogItem,
   CreateCatalogItemPayload,
   UpdateCatalogItemPayload,
 } from '../../types/catalog'
 
-export async function fetchCatalogItems(): Promise<CatalogItem[]> {
-  return apiGet<CatalogItem[]>('/catalog')
+export type CatalogSortBy = 'codigo' | 'descripcion' | 'costo'
+export type CatalogSortOrder = 'asc' | 'desc'
+
+export interface CatalogListParams {
+  categoriaNombre?: string
+  sortBy?: CatalogSortBy
+  sortOrder?: CatalogSortOrder
+  page?: number
+  /** 0 = todos */
+  limit?: number
+}
+
+export interface CatalogListResponse {
+  items: CatalogItem[]
+  total: number
+  page: number
+  pageSize: number | null
+}
+
+export async function fetchCatalogItems(
+  params: CatalogListParams = {},
+): Promise<CatalogListResponse> {
+  return apiGet<CatalogListResponse>('/catalog', { params })
 }
 
 export async function searchCatalogItems(

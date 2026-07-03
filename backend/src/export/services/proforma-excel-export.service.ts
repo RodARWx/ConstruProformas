@@ -17,7 +17,7 @@ export class ProformaExcelExportService {
 
   /** Enriquece la proforma con filas de categoría según el catálogo. */
   async prepareForExport(proforma: Proforma): Promise<Proforma> {
-    const catalog = await this.catalogService.findAll();
+    const { items: catalog } = await this.catalogService.findAll();
     const codigoToCategoria = buildCodigoCategoriaMap(catalog);
     return prepareProformaForExport(proforma, codigoToCategoria);
   }

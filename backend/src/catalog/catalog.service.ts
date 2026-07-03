@@ -1,9 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { DEFAULT_CATEGORY_NAME } from '../categories/default-category.constant';
 import { CategoriesService } from '../categories/categories.service';
 import { Category } from '../categories/entities/category.entity';
+import { CatalogListResponseDto } from './dto/catalog-list-response.dto';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
+import { ListCatalogQueryDto } from './dto/list-catalog-query.dto';
 import { UpdateCatalogItemDto } from './dto/update-catalog-item.dto';
 import { ItemCatalog } from './entities/item-catalog.entity';
 
@@ -19,18 +22,43 @@ export class CatalogService {
     private readonly categoriesService: CategoriesService,
   ) {}
 
-  async findAll(categoriaNombre?: string): Promise<ItemCatalog[]> {
-    const qb = this.itemCatalogRepository
-      .createQueryBuilder('item')
-      .orderBy('item.descripcion', 'ASC');
+  async findAll(query: ListCatalogQueryDto = {}): Promise<CatalogListResponseDto> {
+    const sortBy = query.sortBy ?? 'descripcion';
+    const sortOrder = (query.sortOrder ?? 'asc').toUpperCase() as 'ASC' | 'DESC';
+    const page = query.page ?? 1;
+    const limit = query.limit === undefined ? 0 : query.limit;
 
-    if (categoriaNombre?.trim()) {
+    const qb = this.itemCatalogRepository.createQueryBuilder('item');
+
+    if (query.categoriaNombre?.trim()) {
       qb.andWhere('item.categoriaNombre = :categoriaNombre', {
-        categoriaNombre: categoriaNombre.trim(),
+        categoriaNombre: query.categoriaNombre.trim(),
       });
     }
 
-    return qb.getMany();
+    const sortColumn =
+      sortBy === 'codigo'
+        ? 'item.codigoSugerido'
+        : sortBy === 'costo'
+          ? 'item.costoUnitario'
+          : 'item.descripcion';
+
+    qb.orderBy(sortColumn, sortOrder).addOrderBy('item.descripcion', 'ASC');
+
+    const total = await qb.getCount();
+
+    if (limit > 0) {
+      qb.skip((page - 1) * limit).take(limit);
+    }
+
+    const items = await qb.getMany();
+
+    return {
+      items,
+      total,
+      page: limit > 0 ? page : 1,
+      pageSize: limit > 0 ? limit : null,
+    };
   }
 
   async findOne(id: number): Promise<ItemCatalog> {
@@ -54,7 +82,7 @@ export class CatalogService {
       diasLaborables: dto.diasLaborables ?? 1,
       ivaPercentage: dto.ivaPercentage ?? 15,
       categoria,
-      categoriaNombre: categoria?.nombre ?? null,
+      categoriaNombre: categoria.nombre,
     });
 
     return this.itemCatalogRepository.save(item);
@@ -76,7 +104,7 @@ export class CatalogService {
 
     if (dto.categoriaNombre !== undefined) {
       item.categoria = await this.resolveCategory(dto.categoriaNombre);
-      item.categoriaNombre = item.categoria?.nombre ?? null;
+      item.categoriaNombre = item.categoria.nombre;
     }
 
     return this.itemCatalogRepository.save(item);
@@ -123,14 +151,16 @@ export class CatalogService {
 
   private async resolveCategory(
     categoriaNombre?: string | null,
-  ): Promise<Category | null> {
+  ): Promise<Category> {
+    await this.categoriesService.ensureDefaultCategory();
+
     if (categoriaNombre === undefined || categoriaNombre === null) {
-      return null;
+      return { nombre: DEFAULT_CATEGORY_NAME } as Category;
     }
 
     const nombre = categoriaNombre.trim();
     if (!nombre) {
-      return null;
+      return { nombre: DEFAULT_CATEGORY_NAME } as Category;
     }
 
     await this.categoriesService.assertExists(nombre);

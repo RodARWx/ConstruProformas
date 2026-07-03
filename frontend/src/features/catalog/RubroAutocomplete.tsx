@@ -14,7 +14,7 @@ import type { CatalogItem, RubroLineInsert } from '../../types/catalog'
 import { catalogItemToLineInsert } from '../../types/catalog'
 import { searchCatalogItems } from './catalogApi'
 
-const MIN_QUERY_LENGTH = 3
+const MIN_QUERY_LENGTH = 1
 const DEFAULT_LIMIT = 10
 
 export interface RubroAutocompleteProps {
@@ -29,7 +29,7 @@ export interface RubroAutocompleteProps {
 
 export function RubroAutocomplete({
   label = 'Buscar rubro',
-  placeholder = 'Escriba al menos 3 caracteres…',
+  placeholder = 'Buscar por código o descripción…',
   limit = DEFAULT_LIMIT,
   disabled = false,
   onSelect,
@@ -133,8 +133,7 @@ export function RubroAutocomplete({
     }
   }
 
-  const showHint =
-    query.trim().length > 0 && query.trim().length < MIN_QUERY_LENGTH
+  const showHint = false
   const showEmpty =
     isOpen &&
     !isLoading &&

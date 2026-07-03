@@ -1,5 +1,6 @@
 import type { ProformaDetailLine } from '../../types/proforma-detail'
 import type { ProformaHeaderDraft } from '../../types/proforma'
+import { serializeProformaNotes } from '../../lib/proformaNotes'
 
 /** Línea de detalle según CreateProformaDetailDto / UpdateProformaDetailDto del backend. */
 export interface ProformaDetailPayload {
@@ -21,6 +22,7 @@ export interface CreateProformaPayload {
   profileId: number
   customerId: number
   detalles: ProformaDetailPayload[]
+  notas?: string
 }
 
 /** Payload según UpdateProformaDto del backend. */
@@ -43,6 +45,8 @@ export function draftToCreatePayload(
   header: ProformaHeaderDraft,
   detalles: ProformaDetailLine[],
 ): CreateProformaPayload {
+  const notas = serializeProformaNotes(header.notasLines)
+
   return {
     idProforma: header.idProforma.trim(),
     nombreProyecto: header.nombreProyecto.trim(),
@@ -50,6 +54,7 @@ export function draftToCreatePayload(
     profileId: Number(header.profileId),
     customerId: Number(header.customerId),
     detalles: detalles.map(mapDetailLine),
+    ...(notas ? { notas } : {}),
   }
 }
 
@@ -63,6 +68,7 @@ export function draftToUpdatePayload(
     profileId,
     customerId,
     detalles: lineas,
+    notas,
   } = draftToCreatePayload(header, detalles)
   return {
     nombreProyecto,
@@ -70,5 +76,6 @@ export function draftToUpdatePayload(
     profileId,
     customerId,
     detalles: lineas,
+    ...(notas ? { notas } : {}),
   }
 }

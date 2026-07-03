@@ -69,6 +69,8 @@ export interface ProformaHeaderDraft {
   telefonoCliente: string
   fecha: string
   profileId: number | ''
+  /** Líneas de notas adicionales (cada una se exporta con viñeta). */
+  notasLines: string[]
 }
 
 export interface ProformaDraft {
@@ -109,5 +111,6 @@ export function createEmptyHeaderDraft(
     telefonoCliente: '',
     fecha,
     profileId: '',
+    notasLines: [''],
   }
 }

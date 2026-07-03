@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
+import { CatalogListResponseDto } from './dto/catalog-list-response.dto';
 import { CreateCatalogItemDto } from './dto/create-catalog-item.dto';
 import { ListCatalogQueryDto } from './dto/list-catalog-query.dto';
 import { SearchCatalogQueryDto } from './dto/search-catalog-query.dto';
@@ -21,8 +22,8 @@ export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   @Get()
-  findAll(@Query() query: ListCatalogQueryDto): Promise<ItemCatalog[]> {
-    return this.catalogService.findAll(query.categoriaNombre);
+  findAll(@Query() query: ListCatalogQueryDto): Promise<CatalogListResponseDto> {
+    return this.catalogService.findAll(query);
   }
 
   /**

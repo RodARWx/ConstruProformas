@@ -8,6 +8,11 @@ import { Repository } from 'typeorm';
 import { ItemCatalog } from '../catalog/entities/item-catalog.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import {
+  DEFAULT_CATEGORY_DESCRIPTION,
+  DEFAULT_CATEGORY_NAME,
+  isDefaultCategory,
+} from './default-category.constant';
 import { Category } from './entities/category.entity';
 
 @Injectable()
@@ -49,6 +54,13 @@ export class CategoriesService {
 
   async create(dto: CreateCategoryDto): Promise<Category> {
     const nombre = dto.nombre.trim();
+
+    if (isDefaultCategory(nombre)) {
+      throw new ConflictException(
+        `La categoría "${DEFAULT_CATEGORY_NAME}" es del sistema y no puede crearse manualmente`,
+      );
+    }
+
     await this.assertNombreAvailable(nombre);
 
     const category = this.categoryRepository.create({
@@ -75,6 +87,12 @@ export class CategoriesService {
    * Si tiene rubros, responde 409: debe reasignarlos antes de eliminar.
    */
   async remove(nombre: string): Promise<void> {
+    if (isDefaultCategory(nombre)) {
+      throw new ConflictException(
+        `La categoría "${DEFAULT_CATEGORY_NAME}" es obligatoria del sistema y no puede eliminarse`,
+      );
+    }
+
     await this.findOne(nombre);
 
     const rubrosCount = await this.itemCatalogRepository
@@ -106,5 +124,21 @@ export class CategoriesService {
         `La categoría "${nombre}" ya existe`,
       );
     }
+  }
+
+  /** Garantiza la categoría por defecto para rubros sin clasificar. */
+  async ensureDefaultCategory(): Promise<Category> {
+    const existing = await this.categoryRepository.findOne({
+      where: { nombre: DEFAULT_CATEGORY_NAME },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    return this.categoryRepository.save({
+      nombre: DEFAULT_CATEGORY_NAME,
+      descripcion: DEFAULT_CATEGORY_DESCRIPTION,
+    });
   }
 }

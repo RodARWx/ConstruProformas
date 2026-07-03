@@ -6,6 +6,7 @@ import {
   INSTITUTIONAL_NOTES,
   TOTALS_LABELS,
 } from '../constants/institutional.constants';
+import { buildUserNotesForExport } from '../../proformas/helpers/proforma-notes.helper';
 import {
   categoryRowFont,
   excelThinBorder,
@@ -204,10 +205,7 @@ export function buildNotesBlock(
   sheet.getCell(`A${row}`).alignment = { vertical: 'middle' };
   row += 1;
 
-  const allNotes = [...INSTITUTIONAL_NOTES];
-  if (proforma.notas?.trim()) {
-    allNotes.push(`*${proforma.notas.trim()}`);
-  }
+  const allNotes = [...INSTITUTIONAL_NOTES, ...buildUserNotesForExport(proforma.notas)];
 
   allNotes.forEach((note) => {
     sheet.mergeCells(`A${row}:G${row}`);

@@ -1,9 +1,11 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { existsSync } from 'fs';
-import { In, Repository } from 'typeorm';
+import { In, IsNull, Repository } from 'typeorm';
 import { ItemCatalog } from '../catalog/entities/item-catalog.entity';
+import { DEFAULT_CATEGORY_NAME } from '../categories/default-category.constant';
 import { Category } from '../categories/entities/category.entity';
+import { GENERIC_CUSTOMER } from '../customers/generic-customer.constant';
 import { Customer } from '../customers/entities/customer.entity';
 import {
   FIXED_PROFILES,
@@ -43,7 +45,10 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
 
   async onApplicationBootstrap(): Promise<void> {
     await this.seedProfiles();
+    await this.seedDefaultCategory();
     await this.seedCustomer();
+    await this.seedGenericCustomer();
+    await this.assignUncategorizedRubros();
     await this.seedCatalogFromExcel();
   }
 
@@ -107,6 +112,69 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
     });
 
     this.logger.log('Cliente de prueba insertado (id: 1)');
+  }
+
+  /** Categoría obligatoria para rubros sin clasificación. */
+  private async seedDefaultCategory(): Promise<void> {
+    const exists = await this.categoryRepository.exists({
+      where: { nombre: DEFAULT_CATEGORY_NAME },
+    });
+
+    if (exists) {
+      return;
+    }
+
+    await this.categoryRepository.save({
+      nombre: DEFAULT_CATEGORY_NAME,
+      descripcion:
+        'Rubros sin categoría asignada. Categoría protegida del sistema.',
+    });
+
+    this.logger.log(`Categoría por defecto insertada (${DEFAULT_CATEGORY_NAME})`);
+  }
+
+  /** Cliente genérico "A quien interese" para proformas sin contratante. */
+  private async seedGenericCustomer(): Promise<void> {
+    const existing = await this.customerRepository.findOne({
+      where: { rucCedula: GENERIC_CUSTOMER.rucCedula },
+    });
+
+    if (existing) {
+      return;
+    }
+
+    await this.customerRepository.save({
+      nombreCliente: GENERIC_CUSTOMER.nombreCliente,
+      rucCedula: GENERIC_CUSTOMER.rucCedula,
+      direccion: GENERIC_CUSTOMER.direccion || null,
+      telefono: GENERIC_CUSTOMER.telefono,
+      correo: GENERIC_CUSTOMER.correo,
+    });
+
+    this.logger.log('Cliente genérico "A quien interese" insertado');
+  }
+
+  /** Reasigna rubros huérfanos a la categoría por defecto. */
+  private async assignUncategorizedRubros(): Promise<void> {
+    const nullResult = await this.itemCatalogRepository.update(
+      { categoriaNombre: IsNull() },
+      { categoriaNombre: DEFAULT_CATEGORY_NAME },
+    );
+
+    const emptyResult = await this.itemCatalogRepository
+      .createQueryBuilder()
+      .update(ItemCatalog)
+      .set({ categoriaNombre: DEFAULT_CATEGORY_NAME })
+      .where("categoriaNombre = ''")
+      .execute();
+
+    const affected = (nullResult.affected ?? 0) + (emptyResult.affected ?? 0);
+
+    if (affected > 0) {
+      this.logger.log(
+        `${affected} rubro(s) reasignados a "${DEFAULT_CATEGORY_NAME}"`,
+      );
+    }
   }
 
   /**

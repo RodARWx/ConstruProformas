@@ -11,6 +11,7 @@ import {
 import { getApiErrorMessage, isApiConflict } from '../../lib/api'
 import { formatCurrency } from '../../lib/format'
 import { notify } from '../../lib/toast'
+import { isDefaultCategory } from '../../lib/defaultCategory'
 import type { Category, CategoryRubro } from '../../types/category'
 import type {
   CreateCategoryPayload,
@@ -175,7 +176,8 @@ export function CategoriesPage() {
                     >
                       Editar
                     </Button>
-                    {pendingDeleteNombre === category.nombre ? (
+                    {!isDefaultCategory(category.nombre) &&
+                      (pendingDeleteNombre === category.nombre ? (
                       <>
                         <Button
                           type="button"
@@ -203,7 +205,7 @@ export function CategoriesPage() {
                       >
                         Eliminar
                       </Button>
-                    )}
+                    ))}
                   </div>
                 </div>
 

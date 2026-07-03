@@ -39,6 +39,10 @@ export class UpdateProformaDto {
   customerId?: number;
 
   @IsOptional()
+  @IsString()
+  notas?: string;
+
+  @IsOptional()
   @IsArray()
   @ArrayMinSize(1, { message: 'La proforma debe tener al menos un rubro' })
   @ValidateNested({ each: true })

@@ -2,13 +2,16 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, Input, Section, Select } from '../../components/ui'
 import { useProformaDraft } from '../../context/ProformaDraftContext'
 import { CustomerAutocomplete } from '../../features/customers/CustomerAutocomplete'
+import { searchCustomers } from '../../features/customers/customersApi'
 import {
   checkProformaIdAvailability,
   fetchNextProformaId,
   getIdConflictMessage,
 } from '../../features/proformas/proformasApi'
+import { ProformaNotesEditor } from '../../features/proformas/ProformaNotesEditor'
 import { fetchProfiles } from '../../features/profiles/profilesApi'
 import { getApiErrorMessage } from '../../lib/api'
+import { GENERIC_CUSTOMER, isGenericCustomer } from '../../lib/genericCustomer'
 import { notify } from '../../lib/toast'
 import type { Customer } from '../../types/customer'
 import type { Profile } from '../../types/profile'
@@ -148,6 +151,56 @@ export function ProformaHeaderForm() {
       ? { nombreCliente: header.nombreCliente, rucCedula: header.rucCedula }
       : null
 
+  const isGenericSelected = isGenericCustomer(header.rucCedula, header.nombreCliente)
+
+  const applyGenericCustomer = useCallback(async () => {
+    try {
+      const matches = await searchCustomers(GENERIC_CUSTOMER.rucCedula, 5)
+      const generic = matches.find(
+        (customer) => customer.rucCedula === GENERIC_CUSTOMER.rucCedula,
+      )
+
+      if (generic) {
+        applyCustomer(generic)
+        return
+      }
+
+      setHeader({
+        customerId: '',
+        nombreCliente: GENERIC_CUSTOMER.nombreCliente,
+        rucCedula: GENERIC_CUSTOMER.rucCedula,
+        direccion: GENERIC_CUSTOMER.direccion,
+        telefonoCliente: GENERIC_CUSTOMER.telefono,
+      })
+      setHeaderFieldErrors({
+        ...headerFieldErrors,
+        customerId: 'Guarde el cliente genérico en Clientes o reinicie el servidor',
+      })
+      notify.warning(
+        'Cliente genérico no encontrado',
+        'El servidor debe tener registrado "A quien interese". Reinicie el backend si acaba de actualizar.',
+      )
+    } catch (error) {
+      notify.error('No se pudo aplicar el cliente genérico', getApiErrorMessage(error))
+    }
+  }, [applyCustomer, headerFieldErrors, setHeader, setHeaderFieldErrors])
+
+  async function handleGenericToggle(checked: boolean) {
+    if (checked) {
+      await applyGenericCustomer()
+      return
+    }
+
+    setHeader({
+      customerId: '',
+      nombreCliente: '',
+      rucCedula: '',
+      direccion: '',
+      telefonoCliente: '',
+    })
+    setHeaderFieldErrors({ customerId: undefined })
+  }
+
   return (
     <div className="space-y-8">
       <Section
@@ -221,6 +274,27 @@ export function ProformaHeaderForm() {
             </div>
 
             <div className="sm:col-span-2">
+              <label className="mb-4 flex cursor-pointer items-start gap-3 rounded-md border border-brand-gray/15 bg-[#fafafa] p-4">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 accent-brand-coral"
+                  checked={isGenericSelected}
+                  onChange={(event) => void handleGenericToggle(event.target.checked)}
+                  disabled={disabled}
+                />
+                <span className="text-left text-sm text-brand-gray">
+                  <span className="block font-semibold text-brand-wine">
+                    A quien interese
+                  </span>
+                  <span className="mt-1 block text-brand-gray/75">
+                    Completa automáticamente nombre, cédula ({GENERIC_CUSTOMER.rucCedula})
+                    y teléfono ({GENERIC_CUSTOMER.telefono}).
+                  </span>
+                </span>
+              </label>
+            </div>
+
+            <div className="sm:col-span-2">
               <CustomerAutocomplete
                 label="Buscar cliente"
                 placeholder="Nombre o cédula/RUC…"
@@ -276,6 +350,19 @@ export function ProformaHeaderForm() {
               disabled={disabled}
             />
           </div>
+        </Card>
+      </Section>
+
+      <Section
+        title="Notas del documento"
+        description="Condiciones o aclaraciones adicionales que aparecerán al pie de la proforma exportada."
+      >
+        <Card>
+          <ProformaNotesEditor
+            lines={header.notasLines}
+            disabled={disabled}
+            onChange={(notasLines) => setHeader({ notasLines })}
+          />
         </Card>
       </Section>
 

@@ -38,6 +38,10 @@ export class CreateProformaDto {
   @IsInt({ message: 'El customerId debe ser un entero' })
   customerId: number;
 
+  @IsOptional()
+  @IsString()
+  notas?: string;
+
   @IsArray()
   @ArrayMinSize(1, { message: 'La proforma debe tener al menos un rubro' })
   @ValidateNested({ each: true })

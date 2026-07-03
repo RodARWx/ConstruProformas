@@ -3,6 +3,7 @@ import { Button, Card, Input, Select } from '../../components/ui'
 import { fetchCategories } from '../categories/categoriesApi'
 import { getApiErrorMessage } from '../../lib/api'
 import { notify } from '../../lib/toast'
+import { DEFAULT_CATEGORY_NAME } from '../../lib/defaultCategory'
 import type { Category } from '../../types/category'
 import type { CatalogItem } from '../../types/catalog'
 import type {
@@ -25,7 +26,7 @@ const emptyValues: CatalogFormValues = {
   descripcion: '',
   unidad: '',
   costoUnitario: '',
-  categoriaNombre: '',
+  categoriaNombre: DEFAULT_CATEGORY_NAME,
   diasLaborables: '1',
   ivaPercentage: '15',
 }
@@ -83,7 +84,7 @@ export function CatalogForm({
         descripcion: editingItem.descripcion,
         unidad: editingItem.unidad,
         costoUnitario: String(editingItem.costoUnitario),
-        categoriaNombre: editingItem.categoriaNombre ?? '',
+        categoriaNombre: editingItem.categoriaNombre ?? DEFAULT_CATEGORY_NAME,
         diasLaborables: String(editingItem.diasLaborables ?? 1),
         ivaPercentage: String(editingItem.ivaPercentage ?? 15),
       })
@@ -143,7 +144,7 @@ export function CatalogForm({
       descripcion: values.descripcion.trim(),
       unidad: values.unidad.trim(),
       costoUnitario: Number(values.costoUnitario),
-      categoriaNombre: values.categoriaNombre.trim() || undefined,
+      categoriaNombre: values.categoriaNombre.trim() || DEFAULT_CATEGORY_NAME,
       diasLaborables: Number(values.diasLaborables),
       ivaPercentage: Number(values.ivaPercentage),
     }
@@ -218,10 +219,10 @@ export function CatalogForm({
         <Select
           label="Categoría"
           placeholder={
-            isLoadingCategories ? 'Cargando categorías…' : 'Sin categoría'
+            isLoadingCategories ? 'Cargando categorías…' : DEFAULT_CATEGORY_NAME
           }
           options={categoryOptions}
-          value={values.categoriaNombre}
+          value={values.categoriaNombre || DEFAULT_CATEGORY_NAME}
           onChange={(event) =>
             setValues((current) => ({
               ...current,
@@ -229,7 +230,7 @@ export function CatalogForm({
             }))
           }
           disabled={isSubmitting || isLoadingCategories}
-          hint="Opcional. Agrupa el rubro en la pantalla de categorías."
+          hint="Obligatoria. Los rubros sin categoría van a Otros rubros."
         />
 
         <Input

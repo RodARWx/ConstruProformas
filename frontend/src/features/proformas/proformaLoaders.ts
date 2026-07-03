@@ -5,6 +5,7 @@ import {
   type ProformaDraft,
 } from '../../types/proforma'
 import { getProformaCustomerDisplay } from '../../lib/proformaCustomer'
+import { parseProformaNotes } from '../../lib/proformaNotes'
 
 export function proformaToDraft(proforma: Proforma): ProformaDraft {
   const customer = getProformaCustomerDisplay(proforma)
@@ -22,6 +23,7 @@ export function proformaToDraft(proforma: Proforma): ProformaDraft {
       telefonoCliente: customer.telefono,
       fecha: proforma.fecha,
       profileId: proforma.profileId,
+      notasLines: parseProformaNotes(proforma.notas),
     },
     detalles: (proforma.detalles ?? []).map((line) =>
       createDetailLine({

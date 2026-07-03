@@ -33,6 +33,12 @@ export async function fetchNextProformaId(): Promise<NextIdResponse> {
   return apiGet<NextIdResponse>('/proformas/next-id')
 }
 
+export async function fetchNotasSuggestions(q?: string): Promise<string[]> {
+  return apiGet<string[]>('/proformas/notas/suggestions', {
+    params: q ? { q } : undefined,
+  })
+}
+
 export async function createProforma(
   payload: CreateProformaPayload,
 ): Promise<Proforma> {

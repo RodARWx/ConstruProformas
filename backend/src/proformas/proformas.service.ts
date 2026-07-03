@@ -18,6 +18,7 @@ import { ProformaStatus } from './enums/proforma-status.enum';
 import { calculateProformaTotals } from './helpers/proforma-calculator.helper';
 import { applyCustomerSnapshotToProforma } from './helpers/proforma-customer-snapshot.helper';
 import { suggestNextProformaId } from './helpers/proforma-id.helper';
+import { serializeProformaNotes, parseProformaNotes } from './helpers/proforma-notes.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
 
 @Injectable()
@@ -96,7 +97,7 @@ export class ProformasService {
       nombreProyecto: dto.nombreProyecto,
       tiempoEjecucion: calculated.tiempoEjecucion,
       fecha: dto.fecha,
-      notas: null,
+      notas: serializeProformaNotes(dto.notas),
       status: dto.status ?? ProformaStatus.DRAFT,
       profileId: dto.profileId,
       customerId: dto.customerId,
@@ -138,6 +139,9 @@ export class ProformasService {
     if (dto.status !== undefined) proforma.status = dto.status;
     if (dto.profileId !== undefined) proforma.profileId = dto.profileId;
     if (dto.customerId !== undefined) proforma.customerId = dto.customerId;
+    if (dto.notas !== undefined) {
+      proforma.notas = serializeProformaNotes(dto.notas);
+    }
 
     if (dto.detalles !== undefined) {
       const calculated = calculateProformaTotals(dto.detalles);
@@ -411,5 +415,29 @@ export class ProformasService {
     }
 
     await this.proformaRepository.remove(proforma);
+  }
+
+  /**
+   * Sugiere notas usadas anteriormente en otras proformas (autocompletado).
+   * Devuelve hasta 10 coincidencias en orden alfabético.
+   */
+  async getNotasSuggestions(term?: string): Promise<string[]> {
+    const rows = await this.proformaRepository.find({
+      select: ['notas'],
+      where: {},
+    });
+
+    const normalizedTerm = term?.trim().toLowerCase() ?? '';
+    const unique = new Set<string>();
+
+    for (const row of rows) {
+      for (const line of parseProformaNotes(row.notas)) {
+        if (!normalizedTerm || line.toLowerCase().includes(normalizedTerm)) {
+          unique.add(line);
+        }
+      }
+    }
+
+    return [...unique].sort((a, b) => a.localeCompare(b, 'es')).slice(0, 10);
   }
 }

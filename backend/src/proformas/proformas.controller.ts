@@ -6,9 +6,11 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { CreateProformaDto } from './dto/create-proforma.dto';
 import { NextIdResponse } from './dto/next-id-response.dto';
+import { NotasSuggestionsQueryDto } from './dto/notas-suggestions-query.dto';
 import { SyncProformasDto } from './dto/sync-proformas.dto';
 import { SyncProformasResult } from './dto/sync-result.dto';
 import { UpdateProformaDto } from './dto/update-proforma.dto';
@@ -44,6 +46,12 @@ export class ProformasController {
   @Get('next-id')
   getNextId(): Promise<NextIdResponse> {
     return this.proformasService.getNextSuggestedId();
+  }
+
+  /** Sugerencias de notas usadas en proformas anteriores */
+  @Get('notas/suggestions')
+  getNotasSuggestions(@Query() query: NotasSuggestionsQueryDto): Promise<string[]> {
+    return this.proformasService.getNotasSuggestions(query.q);
   }
 
   /**
