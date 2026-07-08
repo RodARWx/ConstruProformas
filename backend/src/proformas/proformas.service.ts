@@ -3,10 +3,13 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository } from 'typeorm';
 import { Customer } from '../customers/entities/customer.entity';
+import { ItemCatalog } from '../catalog/entities/item-catalog.entity';
 import { Profile } from '../profiles/entities/profile.entity';
 import { CreateProformaDto } from './dto/create-proforma.dto';
 import { NextIdResponse } from './dto/next-id-response.dto';
@@ -16,10 +19,13 @@ import { ProformaDetail } from './entities/proforma-detail.entity';
 import { Proforma } from './entities/proforma.entity';
 import { ProformaStatus } from './enums/proforma-status.enum';
 import { calculateProformaTotals } from './helpers/proforma-calculator.helper';
+import type { CalculatedProformaTotals } from './helpers/proforma-calculator.helper';
 import { applyCustomerSnapshotToProforma } from './helpers/proforma-customer-snapshot.helper';
 import { suggestNextProformaId } from './helpers/proforma-id.helper';
 import { serializeProformaNotes, parseProformaNotes } from './helpers/proforma-notes.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
+import { ExportService } from '../export/export.service';
+import { ProformaExportResult } from '../export/dto/export-result.dto';
 
 @Injectable()
 export class ProformasService {
@@ -32,9 +38,12 @@ export class ProformasService {
     private readonly profileRepository: Repository<Profile>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(ItemCatalog)
+    private readonly itemCatalogRepository: Repository<ItemCatalog>,
+    @Inject(forwardRef(() => ExportService))
+    private readonly exportService: ExportService,
   ) {}
 
-  /** Relaciones estándar para respuestas completas al frontend */
   private readonly defaultRelations = ['detalles', 'profile', 'customer'] as const;
 
   async findAll(): Promise<Proforma[]> {
@@ -44,7 +53,6 @@ export class ProformasService {
     });
   }
 
-  /** Proformas en papelera (eliminación lógica). */
   async findTrash(): Promise<Proforma[]> {
     return this.proformaRepository.find({
       withDeleted: true,
@@ -59,38 +67,30 @@ export class ProformasService {
       where: { idProforma },
       relations: [...this.defaultRelations],
     });
-
     if (!proforma) {
       throw new NotFoundException(`Proforma "${idProforma}" no encontrada`);
     }
-
     return proforma;
   }
 
-  /**
-   * Busca el último ID numérico guardado y sugiere el siguiente secuencial.
-   * Ejemplo: si el último es "CM-PROF-85", retorna "CM-PROF-86".
-   */
   async getNextSuggestedId(): Promise<NextIdResponse> {
     const rows = await this.proformaRepository.find({
       select: ['idProforma'],
       withDeleted: true,
     });
     const existingIds = rows.map((row) => row.idProforma);
-
     return { suggestedId: suggestNextProformaId(existingIds) };
   }
 
-  /**
-   * Crea una proforma recalculando todos los totales en el servidor.
-   * Permite ID manual, pero rechaza duplicados en registros exportados.
-   */
   async create(dto: CreateProformaDto): Promise<Proforma> {
     const customer = await this.getCustomerOrFail(dto.customerId);
     await this.validateReferences(dto.profileId, dto.customerId);
     await this.assertIdAvailableForCreate(dto.idProforma);
 
-    const calculated = calculateProformaTotals(dto.detalles);
+    const calculated = await this.calculateTotalsForCustomer(
+      dto.customerId,
+      dto.detalles,
+    );
 
     const proforma = this.proformaRepository.create({
       idProforma: dto.idProforma,
@@ -109,18 +109,12 @@ export class ProformasService {
     });
 
     applyCustomerSnapshotToProforma(proforma, customer);
-
     const saved = await this.proformaRepository.save(proforma);
     return this.findOne(saved.idProforma);
   }
 
-  /**
-   * Actualiza una proforma en borrador, recalculando totales si se envían rubros.
-   * Las proformas exportadas no pueden modificarse.
-   */
   async update(idProforma: string, dto: UpdateProformaDto): Promise<Proforma> {
     const proforma = await this.findOne(idProforma);
-
     if (proforma.status === ProformaStatus.EXPORTED) {
       throw new BadRequestException(
         'No se puede editar una proforma que ya fue exportada',
@@ -144,35 +138,42 @@ export class ProformasService {
     }
 
     if (dto.detalles !== undefined) {
-      const calculated = calculateProformaTotals(dto.detalles);
-
+      const calculated = await this.calculateTotalsForCustomer(
+        dto.customerId ?? proforma.customerId,
+        dto.detalles,
+      );
       proforma.subtotal = calculated.subtotal;
       proforma.iva = calculated.iva;
       proforma.totalGeneral = calculated.totalGeneral;
       proforma.montoContrato = calculated.montoContrato;
       proforma.tiempoEjecucion = calculated.tiempoEjecucion;
 
-      // Reemplazo completo de líneas con cascade
       await this.proformaDetailRepository.delete({ proformaId: idProforma });
       proforma.detalles = this.mapDetailsToEntities(idProforma, calculated.detalles);
+    } else if (dto.customerId !== undefined) {
+      const calculated = await this.calculateTotalsForCustomer(
+        proforma.customerId,
+        proforma.detalles.map((linea) => this.mapEntityDetailToDto(linea)),
+      );
+      proforma.subtotal = calculated.subtotal;
+      proforma.iva = calculated.iva;
+      proforma.totalGeneral = calculated.totalGeneral;
+      proforma.montoContrato = calculated.montoContrato;
+      proforma.tiempoEjecucion = calculated.tiempoEjecucion;
     }
 
     const customer = await this.getCustomerOrFail(proforma.customerId);
     applyCustomerSnapshotToProforma(proforma, customer);
-
     await this.proformaRepository.save(proforma);
     return this.findOne(idProforma);
   }
 
-  /**
-   * Duplica la cabecera y todas sus líneas de detalle,
-   * asignando un nuevo ID sugerido y estado DRAFT.
-   */
   async clone(idProforma: string): Promise<Proforma> {
     const source = await this.findOne(idProforma);
     const { suggestedId } = await this.getNextSuggestedId();
 
-    const calculated = calculateProformaTotals(
+    const calculated = await this.calculateTotalsForCustomer(
+      source.customerId,
       source.detalles.map((linea) => this.mapEntityDetailToDto(linea)),
     );
 
@@ -206,10 +207,6 @@ export class ProformasService {
     return this.findOne(saved.idProforma);
   }
 
-  /**
-   * Procesa un lote de proformas capturadas offline en la PWA.
-   * Inserta nuevas, actualiza borradores existentes y reporta errores por ítem.
-   */
   async syncBatch(proformas: CreateProformaDto[]): Promise<SyncProformasResult> {
     const results: SyncProformasResult['results'] = [];
 
@@ -270,7 +267,6 @@ export class ProformasService {
     };
   }
 
-  /** Valida que el perfil y el cliente existan antes de persistir */
   private async validateReferences(
     profileId: number,
     customerId: number,
@@ -293,27 +289,19 @@ export class ProformasService {
     const customer = await this.customerRepository.findOne({
       where: { id: customerId },
     });
-
     if (!customer) {
       throw new NotFoundException(`Cliente con id ${customerId} no encontrado`);
     }
-
     return customer;
   }
 
-  /**
-   * Impide crear proformas cuyo ID ya esté en uso,
-   * con énfasis en registros exportados según la regla de negocio.
-   */
   private async assertIdAvailableForCreate(idProforma: string): Promise<void> {
     const existing = await this.proformaRepository.findOne({
       where: { idProforma },
       withDeleted: true,
     });
 
-    if (!existing) {
-      return;
-    }
+    if (!existing) return;
 
     if (existing.deletedAt) {
       throw new ConflictException(
@@ -330,7 +318,6 @@ export class ProformasService {
     throw new ConflictException(`El ID "${idProforma}" ya está en uso`);
   }
 
-  /** Mapea una entidad de detalle al DTO usado por el calculador. */
   private mapEntityDetailToDto(linea: ProformaDetail): CreateProformaDetailDto {
     return {
       codigo: linea.codigo ?? undefined,
@@ -345,7 +332,6 @@ export class ProformasService {
     };
   }
 
-  /** Mapea DTOs calculados a entidades de detalle listas para persistir */
   private mapDetailsToEntities(
     proformaId: string,
     detalles: Array<CreateProformaDetailDto & { total: number }>,
@@ -367,69 +353,98 @@ export class ProformasService {
     );
   }
 
-  /** Marca la proforma como exportada tras generar PDF/Excel */
+  private async calculateTotalsForCustomer(
+    customerId: number,
+    detalles: CreateProformaDetailDto[],
+  ): Promise<CalculatedProformaTotals> {
+    const customer = await this.getCustomerOrFail(customerId);
+    const rubroDiscountByCodigo = await this.buildRubroDiscountMap(detalles);
+
+    return calculateProformaTotals(detalles, {
+      customerDiscountPercentage: customer.discountPercentage ?? 0,
+      rubroDiscountByCodigo,
+    });
+  }
+
+  private async buildRubroDiscountMap(
+    detalles: CreateProformaDetailDto[],
+  ): Promise<Record<string, number>> {
+    const codigos = [
+      ...new Set(
+        detalles
+          .map((linea) => linea.codigo?.trim())
+          .filter((codigo): codigo is string => Boolean(codigo)),
+      ),
+    ];
+
+    if (codigos.length === 0) return {};
+
+    const items = await this.itemCatalogRepository
+      .createQueryBuilder('item')
+      .where('item.codigoSugerido IN (:...codigos)', { codigos })
+      .getMany();
+
+    const map: Record<string, number> = {};
+    for (const item of items) {
+      if (item.codigoSugerido) {
+        map[item.codigoSugerido] = item.discountPercentage ?? 0;
+      }
+    }
+    return map;
+  }
+
   async markAsExported(idProforma: string): Promise<void> {
     const proforma = await this.findOne(idProforma);
     proforma.status = ProformaStatus.EXPORTED;
     await this.proformaRepository.save(proforma);
   }
 
-  /** Envía la proforma a la papelera (soft delete). */
+  // ✅ Método de exportación que usa ExportService
+  async exportProforma(idProforma: string): Promise<ProformaExportResult> {
+    await this.findOne(idProforma);
+    return this.exportService.exportProforma(idProforma);
+  }
+
   async remove(idProforma: string): Promise<void> {
     await this.findOne(idProforma);
     await this.proformaRepository.softDelete(idProforma);
   }
 
-  /** Restaura una proforma desde la papelera. */
   async restore(idProforma: string): Promise<Proforma> {
     const proforma = await this.proformaRepository.findOne({
       where: { idProforma },
       withDeleted: true,
     });
-
     if (!proforma?.deletedAt) {
       throw new NotFoundException(
         `Proforma "${idProforma}" no encontrada en la papelera`,
       );
     }
-
     await this.proformaRepository.restore(idProforma);
     return this.findOne(idProforma);
   }
 
-  /**
-   * Elimina permanentemente una proforma que ya está en la papelera.
-   * Solo se permite de una en una; libera el ID para reutilización futura.
-   */
   async permanentRemove(idProforma: string): Promise<void> {
     const proforma = await this.proformaRepository.findOne({
       where: { idProforma },
       withDeleted: true,
       relations: [...this.defaultRelations],
     });
-
     if (!proforma?.deletedAt) {
       throw new NotFoundException(
         `Proforma "${idProforma}" no está en la papelera o ya fue eliminada`,
       );
     }
-
     await this.proformaRepository.remove(proforma);
   }
 
-  /**
-   * Sugiere notas usadas anteriormente en otras proformas (autocompletado).
-   * Devuelve hasta 10 coincidencias en orden alfabético.
-   */
   async getNotasSuggestions(term?: string): Promise<string[]> {
     const rows = await this.proformaRepository.find({
       select: ['notas'],
       where: {},
     });
-
     const normalizedTerm = term?.trim().toLowerCase() ?? '';
     const unique = new Set<string>();
-
     for (const row of rows) {
       for (const line of parseProformaNotes(row.notas)) {
         if (!normalizedTerm || line.toLowerCase().includes(normalizedTerm)) {
@@ -437,7 +452,6 @@ export class ProformasService {
         }
       }
     }
-
     return [...unique].sort((a, b) => a.localeCompare(b, 'es')).slice(0, 10);
   }
 }

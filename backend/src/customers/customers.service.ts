@@ -46,6 +46,7 @@ export class CustomersService {
       direccion: dto.direccion ?? null,
       telefono: dto.telefono ?? null,
       correo: dto.correo ?? null,
+      discountPercentage: dto.discountPercentage ?? 0,
     });
 
     return this.customerRepository.save(customer);
@@ -63,6 +64,9 @@ export class CustomersService {
     if (dto.direccion !== undefined) customer.direccion = dto.direccion;
     if (dto.telefono !== undefined) customer.telefono = dto.telefono;
     if (dto.correo !== undefined) customer.correo = dto.correo;
+    if (dto.discountPercentage !== undefined) {
+      customer.discountPercentage = dto.discountPercentage;
+    }
 
     return this.customerRepository.save(customer);
   }

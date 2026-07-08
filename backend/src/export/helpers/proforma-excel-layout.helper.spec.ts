@@ -79,4 +79,52 @@ describe('proforma-excel-layout.helper', () => {
     const diasCell = sheet.getCell(`G${layout.totalsStartRow}`);
     expect(diasCell.value).toEqual({ formula: 'SUM(C14,C15)' });
   });
+
+  it('genera fórmulas y valores de descuento en totales cuando se aplica descuento', () => {
+    const sheet = new ExcelJS.Workbook().addWorksheet('TEST');
+    const detalles = [
+      createDetail({
+        descripcion: 'Rubro 1',
+        cantidad: 2,
+        costoUnitario: 100,
+        total: 200,
+        diasLaborables: 3,
+      }),
+    ];
+
+    const layout = buildDynamicItemRows(sheet, detalles, 13);
+    buildTotalsBlock(
+      sheet,
+      {
+        iva: 15,
+        subtotal: 200,
+        totalGeneral: 195, // 200 - 20 (descuento) + 15 (iva)
+      } as never,
+      layout,
+      20, // descuentoTotal
+      10, // descuentoPorcentaje
+    );
+
+    const subtotalRow = layout.totalsStartRow + 1;
+    const descuentoRow = subtotalRow + 1;
+    const subtotalConDescuentoRow = descuentoRow + 1;
+    const ivaRow = subtotalConDescuentoRow + 1;
+    const totalRow = ivaRow + 1;
+
+    // Verificar valor del descuento (debe ser negativo)
+    const descuentoCell = sheet.getCell(`G${descuentoRow}`);
+    expect(descuentoCell.value).toBe(-20);
+
+    // Verificar fórmula de subtotal con descuento (debe sumar la celda de descuento que es negativa)
+    const subtotalConDescuentoCell = sheet.getCell(`G${subtotalConDescuentoRow}`);
+    expect(subtotalConDescuentoCell.value).toEqual({
+      formula: `G${subtotalRow}+G${descuentoRow}`,
+    });
+
+    // Verificar fórmula del total
+    const totalCell = sheet.getCell(`G${totalRow}`);
+    expect(totalCell.value).toEqual({
+      formula: `G${subtotalConDescuentoRow}+G${ivaRow}`,
+    });
+  });
 });

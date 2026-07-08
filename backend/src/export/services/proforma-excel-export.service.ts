@@ -10,23 +10,29 @@ import {
   prepareProformaForExport,
 } from '../helpers/proforma-export-details.helper';
 import { getExportsDirectory } from '../helpers/storage-path.helper';
+import { roundMoney } from '../../proformas/helpers/proforma-calculator.helper';
 
 @Injectable()
 export class ProformaExcelExportService {
   constructor(private readonly catalogService: CatalogService) {}
 
-  /** Enriquece la proforma con filas de categoría según el catálogo. */
   async prepareForExport(proforma: Proforma): Promise<Proforma> {
     const { items: catalog } = await this.catalogService.findAll();
     const codigoToCategoria = buildCodigoCategoriaMap(catalog);
     return prepareProformaForExport(proforma, codigoToCategoria);
   }
 
-  /**
-   * Genera el .xlsx institucional desde cero con ExcelJS.
-   */
   async export(proforma: Proforma): Promise<ExportedFileInfo> {
     const prepared = await this.prepareForExport(proforma);
+
+    // --- Derivar descuento de forma directa y limpia ---
+    const descuentoTotal = Math.max(
+      0,
+      roundMoney(prepared.subtotal - (prepared.totalGeneral - prepared.iva)),
+    );
+    const descuentoPorcentaje =
+      prepared.subtotal > 0 ? (descuentoTotal / prepared.subtotal) * 100 : 0;
+
     const filename = buildExportFilename(
       prepared.idProforma,
       prepared.nombreProyecto,
@@ -34,7 +40,7 @@ export class ProformaExcelExportService {
     );
     const absolutePath = join(getExportsDirectory(), filename);
 
-    const { workbook } = await buildProformaWorkbook(prepared);
+    const { workbook } = await buildProformaWorkbook(prepared, descuentoTotal, descuentoPorcentaje);
     await workbook.xlsx.writeFile(absolutePath);
 
     return {

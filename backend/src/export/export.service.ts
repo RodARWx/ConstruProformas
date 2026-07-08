@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { ProformaStatus } from '../proformas/enums/proforma-status.enum';
 import { ProformasService } from '../proformas/proformas.service';
 import { ProformaExportResult } from './dto/export-result.dto';
@@ -11,15 +11,12 @@ export type ExportFormat = 'excel' | 'pdf' | 'both';
 @Injectable()
 export class ExportService {
   constructor(
+    @Inject(forwardRef(() => ProformasService)) // ✅ AÑADIR ESTO
     private readonly proformasService: ProformasService,
     private readonly excelExportService: ProformaExcelExportService,
     private readonly pdfExportService: ProformaPdfExportService,
   ) {}
 
-  /**
-   * Genera archivos de exportación institucional y marca la proforma como EXPORTED.
-   * PDF siempre se deriva del Excel (LibreOffice) o fallback HTML/Puppeteer.
-   */
   async exportProforma(
     idProforma: string,
     format: ExportFormat = 'both',

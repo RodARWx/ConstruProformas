@@ -181,11 +181,51 @@ describe('proforma-calculator.helper', () => {
       const result = calculateProformaTotals(detalles);
 
       expect(result.subtotal).toBe(200);
+      expect(result.descuentoTotal).toBe(0);
+      expect(result.subtotalConDescuento).toBe(200);
       expect(result.iva).toBe(30);
       expect(result.totalGeneral).toBe(230);
       expect(result.tiempoEjecucion).toBe('5');
       expect(result.detalles[0].total).toBe(0);
       expect(result.detalles[0].ivaLinea).toBe(0);
+    });
+
+    it('aplica descuento cliente + rubro antes del IVA', () => {
+      const detalles: CreateProformaDetailDto[] = [
+        {
+          codigo: 'R-01',
+          descripcion: 'Rubro con descuento',
+          unidad: 'u',
+          cantidad: 10,
+          costoUnitario: 100,
+          diasLaborables: 1,
+          ivaPercentage: 15,
+        },
+      ];
+
+      const result = calculateProformaTotals(detalles, {
+        customerDiscountPercentage: 5,
+        rubroDiscountByCodigo: { 'R-01': 10 },
+      });
+
+      expect(result.subtotal).toBe(1000);
+      expect(result.descuentoTotal).toBe(150);
+      expect(result.descuentoPorcentajeEfectivo).toBe(15);
+      expect(result.subtotalConDescuento).toBe(850);
+      expect(result.detalles[0].ivaLinea).toBe(127.5);
+      expect(result.iva).toBe(127.5);
+      expect(result.totalGeneral).toBe(977.5);
+      expect(result.montoContrato).toBe(977.5);
+    });
+
+    it('con descuentos en 0 se comporta igual que antes', () => {
+      const result = calculateProformaTotals([rubroBase]);
+
+      expect(result.subtotal).toBe(255);
+      expect(result.descuentoTotal).toBe(0);
+      expect(result.subtotalConDescuento).toBe(255);
+      expect(result.iva).toBe(38.25);
+      expect(result.totalGeneral).toBe(293.25);
     });
   });
 });

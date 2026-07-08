@@ -46,4 +46,10 @@ export class UpdateCatalogItemDto {
   @Min(0, { message: 'El porcentaje de IVA no puede ser negativo' })
   @Max(100, { message: 'El porcentaje de IVA no puede superar 100' })
   ivaPercentage?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El descuento debe ser un número válido' })
+  @Min(0, { message: 'El descuento no puede ser negativo' })
+  discountPercentage?: number;
 }

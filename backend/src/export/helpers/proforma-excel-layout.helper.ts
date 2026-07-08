@@ -117,6 +117,8 @@ export function buildTotalsBlock(
   sheet: ExcelJS.Worksheet,
   proforma: Proforma,
   layout: ProformaLayoutResult,
+  descuentoTotal: number = 0,        // <-- NUEVO
+  descuentoPorcentaje: number = 0,   // <-- NUEVO
 ): number {
   let row = layout.totalsStartRow;
   const { rubroRows } = layout;
@@ -155,6 +157,38 @@ export function buildTotalsBlock(
   const subtotalRow = row;
   row += 1;
 
+  // --- DESCUENTO (si existe) ---
+  let descuentoRow: number | null = null;
+  let subtotalConDescuentoRow: number | null = null; // ✅ declarada aquí
+
+  if (descuentoTotal > 0) {
+    descuentoRow = row;
+    sheet.mergeCells(`A${row}:F${row}`);
+    sheet.getCell(`A${row}`).value = `DESCUENTO (${descuentoPorcentaje.toFixed(2)}%)`;
+    sheet.getCell(`A${row}`).font = fontBlack();
+    sheet.getCell(`A${row}`).alignment = { horizontal: 'right', vertical: 'middle' };
+    sheet.getCell(`G${row}`).value = -descuentoTotal;
+    sheet.getCell(`G${row}`).font = fontBook();
+    sheet.getCell(`G${row}`).numFmt = MONEY_FORMAT;
+    sheet.getCell(`G${row}`).alignment = { horizontal: 'right' };
+    sheet.getCell(`G${row}`).border = excelThinBorder;
+    row += 1;
+
+    // SUBTOTAL CON DESCUENTO
+    subtotalConDescuentoRow = row;
+    sheet.mergeCells(`A${row}:F${row}`);
+    sheet.getCell(`A${row}`).value = 'SUBTOTAL CON DESCUENTO';
+    sheet.getCell(`A${row}`).font = fontBlack();
+    sheet.getCell(`A${row}`).alignment = { horizontal: 'right', vertical: 'middle' };
+    const subtotalConDescuentoFormula = `G${subtotalRow}+G${descuentoRow}`;
+    sheet.getCell(`G${row}`).value = { formula: subtotalConDescuentoFormula };
+    sheet.getCell(`G${row}`).font = fontBook();
+    sheet.getCell(`G${row}`).numFmt = MONEY_FORMAT;
+    sheet.getCell(`G${row}`).alignment = { horizontal: 'right' };
+    sheet.getCell(`G${row}`).border = excelThinBorder;
+    row += 1;
+  }
+
   let ivaRow: number | null = null;
   if (proforma.iva > 0) {
     ivaRow = row;
@@ -176,9 +210,17 @@ export function buildTotalsBlock(
   sheet.getCell(`A${row}`).font = totalRedFont();
   sheet.getCell(`A${row}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
+  // Determinar la base para el total
+  let totalBaseRow: number;
+  if (subtotalConDescuentoRow !== null) {
+    totalBaseRow = subtotalConDescuentoRow;
+  } else {
+    totalBaseRow = subtotalRow;
+  }
+
   const totalFormula = ivaRow
-    ? `G${subtotalRow}+G${ivaRow}`
-    : `G${subtotalRow}`;
+    ? `G${totalBaseRow}+G${ivaRow}`
+    : `G${totalBaseRow}`;
 
   sheet.getCell(`G${row}`).value = { formula: totalFormula };
   sheet.getCell(`G${row}`).font = totalRedFont();

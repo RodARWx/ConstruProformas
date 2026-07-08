@@ -26,6 +26,10 @@ export class Customer {
   @Column({ type: 'text', nullable: true })
   correo: string | null;
 
+  /** Porcentaje de descuento del cliente (demo). */
+  @Column({ type: 'real', default: 0 })
+  discountPercentage: number;
+
   @OneToMany(() => Proforma, (proforma) => proforma.customer)
   proformas: Proforma[];
 }

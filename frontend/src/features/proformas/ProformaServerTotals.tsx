@@ -1,5 +1,5 @@
 import { cn } from '../../lib/cn'
-import { formatCurrency } from '../../lib/format'
+import { formatCurrency, formatNumber } from '../../lib/format'
 import type { Proforma } from '../../types/proforma'
 
 export interface ProformaServerTotalsProps {
@@ -10,8 +10,25 @@ export interface ProformaServerTotalsProps {
   className?: string
 }
 
+function deriveDiscountTotals(proforma: Proforma) {
+  const subtotal = proforma.subtotal
+  const subtotalConDescuento = proforma.totalGeneral - proforma.iva
+  const descuentoMonto = subtotal - subtotalConDescuento
+  const descuentoPorcentaje =
+    subtotal > 0 ? (descuentoMonto / subtotal) * 100 : 0
+
+  return {
+    subtotal,
+    descuentoPorcentaje,
+    descuentoMonto,
+    subtotalConDescuento,
+    iva: proforma.iva,
+    total: proforma.totalGeneral,
+  }
+}
+
 /**
- * Totales calculados por el backend (subtotal sin IVA, IVA, total con IVA, tiempo).
+ * Totales calculados por el backend (subtotal, descuento, IVA, total).
  * Nunca calcula en cliente.
  */
 export function ProformaServerTotals({
@@ -23,26 +40,43 @@ export function ProformaServerTotals({
   if (!proforma) {
     return (
       <p className={cn('text-sm text-brand-gray/70', className)}>
-        Guarde el borrador para ver subtotal, IVA, total con IVA y tiempo de ejecución
-        calculados por el servidor.
+        Guarde el borrador para ver subtotal, descuento, IVA, total y tiempo de
+        ejecución calculados por el servidor.
       </p>
     )
   }
 
+  const totals = deriveDiscountTotals(proforma)
+
   const items = [
     {
-      label: 'Subtotal sin IVA',
-      value: formatCurrency(proforma.subtotal),
+      label: 'Subtotal',
+      value: formatCurrency(totals.subtotal),
+      emphasis: false,
+    },
+    {
+      label: 'Descuento (%)',
+      value: `${formatNumber(totals.descuentoPorcentaje)}%`,
+      emphasis: false,
+    },
+    {
+      label: 'Descuento ($)',
+      value: formatCurrency(totals.descuentoMonto),
+      emphasis: false,
+    },
+    {
+      label: 'Subtotal con descuento',
+      value: formatCurrency(totals.subtotalConDescuento),
       emphasis: false,
     },
     {
       label: 'IVA',
-      value: formatCurrency(proforma.iva),
+      value: formatCurrency(totals.iva),
       emphasis: false,
     },
     {
-      label: 'Total con IVA',
-      value: formatCurrency(proforma.totalGeneral),
+      label: 'Total',
+      value: formatCurrency(totals.total),
       emphasis: true,
     },
     {

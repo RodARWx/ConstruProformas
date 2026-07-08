@@ -19,6 +19,7 @@ export interface CatalogFormValues {
   categoriaNombre: string
   diasLaborables: string
   ivaPercentage: string
+  discountPercentage: string
 }
 
 const emptyValues: CatalogFormValues = {
@@ -29,6 +30,7 @@ const emptyValues: CatalogFormValues = {
   categoriaNombre: DEFAULT_CATEGORY_NAME,
   diasLaborables: '1',
   ivaPercentage: '15',
+  discountPercentage: '0',
 }
 
 interface CatalogFormProps {
@@ -87,6 +89,7 @@ export function CatalogForm({
         categoriaNombre: editingItem.categoriaNombre ?? DEFAULT_CATEGORY_NAME,
         diasLaborables: String(editingItem.diasLaborables ?? 1),
         ivaPercentage: String(editingItem.ivaPercentage ?? 15),
+        discountPercentage: String(editingItem.discountPercentage ?? 0),
       })
       setErrors({})
     } else {
@@ -131,6 +134,13 @@ export function CatalogForm({
       }
     }
 
+    if (values.discountPercentage.trim()) {
+      const discount = Number(values.discountPercentage)
+      if (Number.isNaN(discount) || discount < 0) {
+        nextErrors.discountPercentage = 'Ingrese un número mayor o igual a 0'
+      }
+    }
+
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
   }
@@ -147,6 +157,7 @@ export function CatalogForm({
       categoriaNombre: values.categoriaNombre.trim() || DEFAULT_CATEGORY_NAME,
       diasLaborables: Number(values.diasLaborables),
       ivaPercentage: Number(values.ivaPercentage),
+      discountPercentage: Number(values.discountPercentage || 0),
     }
 
     await onSubmit(payload)
@@ -291,6 +302,25 @@ export function CatalogForm({
           required
           disabled={isSubmitting}
           hint="Por defecto 15. Use 0 para rubros exentos."
+        />
+
+        <Input
+          label="Descuento (%)"
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          placeholder="0"
+          value={values.discountPercentage}
+          onChange={(event) =>
+            setValues((current) => ({
+              ...current,
+              discountPercentage: event.target.value,
+            }))
+          }
+          error={errors.discountPercentage}
+          disabled={isSubmitting}
+          hint="Demo. Se suma al descuento del cliente en proformas."
         />
 
         <div className="flex flex-wrap items-end gap-3 sm:col-span-2">

@@ -35,6 +35,10 @@ export class ItemCatalog {
   @Column({ type: 'real', default: 15 })
   ivaPercentage: number;
 
+  /** Porcentaje de descuento del rubro (demo). */
+  @Column({ type: 'real', default: 0 })
+  discountPercentage: number;
+
   /** FK hacia Category.nombre (columna física en SQLite). */
   @Column({ type: 'text', nullable: true })
   categoriaNombre: string | null;

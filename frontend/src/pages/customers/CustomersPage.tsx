@@ -116,6 +116,11 @@ export function CustomersPage() {
       render: (row) => row.telefono ?? '—',
     },
     {
+      key: 'correo',
+      header: 'Correo',
+      render: (row) => row.correo ?? '—',
+    },
+    {
       key: 'direccion',
       header: 'Dirección',
       render: (row) => row.direccion ?? '—',

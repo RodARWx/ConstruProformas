@@ -11,14 +11,18 @@ export interface CustomerFormValues {
   rucCedula: string
   nombreCliente: string
   telefono: string
+  correo: string
   direccion: string
+  discountPercentage: string
 }
 
 const emptyValues: CustomerFormValues = {
   rucCedula: '',
   nombreCliente: '',
   telefono: '',
+  correo: '',
   direccion: '',
+  discountPercentage: '0',
 }
 
 interface CustomerFormProps {
@@ -48,7 +52,9 @@ export function CustomerForm({
         rucCedula: editingCustomer.rucCedula,
         nombreCliente: editingCustomer.nombreCliente,
         telefono: editingCustomer.telefono ?? '',
+        correo: editingCustomer.correo ?? '',
         direccion: editingCustomer.direccion ?? '',
+        discountPercentage: String(editingCustomer.discountPercentage ?? 0),
       })
       setErrors({})
       setRucConflictMessage(undefined)
@@ -68,6 +74,12 @@ export function CustomerForm({
     if (!values.nombreCliente.trim()) {
       nextErrors.nombreCliente = 'El nombre del cliente es obligatorio'
     }
+    if (values.discountPercentage.trim()) {
+      const discount = Number(values.discountPercentage)
+      if (Number.isNaN(discount) || discount < 0) {
+        nextErrors.discountPercentage = 'Ingrese un número mayor o igual a 0'
+      }
+    }
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -81,7 +93,9 @@ export function CustomerForm({
       rucCedula: values.rucCedula.trim(),
       nombreCliente: values.nombreCliente.trim(),
       telefono: values.telefono.trim() || undefined,
+      correo: values.correo.trim() || undefined,
       direccion: values.direccion.trim() || undefined,
+      discountPercentage: Number(values.discountPercentage || 0),
     }
 
     try {
@@ -158,6 +172,18 @@ export function CustomerForm({
         />
 
         <Input
+          label="Correo (Gmail)"
+          placeholder="usuario@gmail.com"
+          type="email"
+          value={values.correo}
+          onChange={(event) =>
+            setValues((current) => ({ ...current, correo: event.target.value }))
+          }
+          disabled={isSubmitting}
+          hint="Opcional. Use un correo válido."
+        />
+
+        <Input
           label="Dirección"
           placeholder="Dirección fiscal o de contacto"
           value={values.direccion}
@@ -166,6 +192,25 @@ export function CustomerForm({
           }
           disabled={isSubmitting}
           hint="Opcional."
+        />
+
+        <Input
+          label="Descuento (%)"
+          type="number"
+          min="0"
+          step="any"
+          inputMode="decimal"
+          placeholder="0"
+          value={values.discountPercentage}
+          onChange={(event) =>
+            setValues((current) => ({
+              ...current,
+              discountPercentage: event.target.value,
+            }))
+          }
+          error={errors.discountPercentage}
+          disabled={isSubmitting}
+          hint="Demo. Se suma al descuento del rubro en proformas."
         />
 
         <div className="flex flex-wrap gap-3 sm:col-span-2">

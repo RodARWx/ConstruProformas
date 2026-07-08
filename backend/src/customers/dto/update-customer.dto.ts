@@ -1,8 +1,11 @@
+import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsString,
+  Min,
 } from 'class-validator';
 
 export class UpdateCustomerDto {
@@ -27,4 +30,10 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsEmail({}, { message: 'El correo debe ser válido' })
   correo?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber({}, { message: 'El descuento debe ser un número válido' })
+  @Min(0, { message: 'El descuento no puede ser negativo' })
+  discountPercentage?: number;
 }

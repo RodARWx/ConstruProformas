@@ -81,6 +81,7 @@ export class CatalogService {
       costoUnitario: dto.costoUnitario,
       diasLaborables: dto.diasLaborables ?? 1,
       ivaPercentage: dto.ivaPercentage ?? 15,
+      discountPercentage: dto.discountPercentage ?? 0,
       categoria,
       categoriaNombre: categoria.nombre,
     });
@@ -101,6 +102,9 @@ export class CatalogService {
     if (dto.costoUnitario !== undefined) item.costoUnitario = dto.costoUnitario;
     if (dto.diasLaborables !== undefined) item.diasLaborables = dto.diasLaborables;
     if (dto.ivaPercentage !== undefined) item.ivaPercentage = dto.ivaPercentage;
+    if (dto.discountPercentage !== undefined) {
+      item.discountPercentage = dto.discountPercentage;
+    }
 
     if (dto.categoriaNombre !== undefined) {
       item.categoria = await this.resolveCategory(dto.categoriaNombre);

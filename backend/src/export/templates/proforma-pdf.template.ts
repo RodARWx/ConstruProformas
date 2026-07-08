@@ -7,7 +7,13 @@ import { buildEmbeddedFontCss } from '../helpers/brand-fonts.helper';
 import { formatCurrency, formatDate } from '../helpers/filename.helper';
 import { getValidationUrl } from '../helpers/qr-code.helper';
 
-export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): string {
+export function renderProformaHtml(
+  proforma: Proforma,
+  qrDataUrl?: string,
+  logoDataUrl?: string,
+  descuentoTotal: number = 0,
+  descuentoPorcentaje: number = 0,
+): string {
   const fontCss = buildEmbeddedFontCss();
   const showIva = proforma.iva > 0;
 
@@ -16,7 +22,6 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
       if (linea.esCategoria) {
         return `<tr class="category"><td colspan="7">${escapeHtml(linea.descripcion)}</td></tr>`;
       }
-
       return `<tr class="item">
         <td>${escapeHtml(linea.codigo ?? '')}</td>
         <td>${escapeHtml(linea.descripcion)}</td>
@@ -30,10 +35,7 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
     .join('\n');
 
   const notes = [...INSTITUTIONAL_NOTES, ...buildUserNotesForExport(proforma.notas)];
-
-  const notesHtml = notes
-    .map((note) => `<p class="note-line">${escapeHtml(note)}</p>`)
-    .join('\n');
+  const notesHtml = notes.map((note) => `<p class="note-line">${escapeHtml(note)}</p>`).join('\n');
 
   const profile = proforma.profile;
   const customer = resolveProformaCustomerSnapshot(proforma);
@@ -56,7 +58,15 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
     h1, h2, h3, .title, .section-title, .category td, .totals .total-label {
       font-family: '${BRAND_FONTS.black}', 'Arial Black', sans-serif;
     }
-    .header { margin-bottom: 12px; }
+    .header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+    .header-left { flex: 1; }
+    .header-right { margin-left: 16px; }
+    .header-right img { max-height: 60px; width: auto; }
     .project { font-size: ${BRAND_FONT_SIZE}px; margin-bottom: 8px; }
     .company { text-align: center; font-size: ${BRAND_FONT_SIZE}px; margin: 4px 0; }
     .company-meta { text-align: center; font-size: ${BRAND_FONT_SIZE}px; color: ${BRAND_COLORS.secondaryText}; }
@@ -95,6 +105,10 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
       font-family: '${BRAND_FONTS.black}', 'Arial Black', sans-serif;
       font-size: ${BRAND_FONT_SIZE}px;
     }
+    .totals-row.discount .label, .totals-row.discount .value {
+      color: ${BRAND_COLORS.burgundy};
+      font-weight: bold;
+    }
     .notes { margin-top: 16px; }
     .notes .section-title { margin-bottom: 6px; }
     .note-line { color: ${BRAND_COLORS.secondaryText}; margin: 2px 0; font-size: ${BRAND_FONT_SIZE}px; }
@@ -105,17 +119,20 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
 </head>
 <body>
   <div class="header">
-    <div class="project">PROYECTO: ${escapeHtml(proforma.idProforma)}-${escapeHtml(proforma.nombreProyecto)}</div>
-    <div class="company">${escapeHtml(INSTITUTIONAL_COMPANY.nombre)}</div>
-    <div class="company-meta">${escapeHtml(INSTITUTIONAL_COMPANY.direccion)}</div>
-    <div class="company-meta">RUC: ${escapeHtml(INSTITUTIONAL_COMPANY.ruc)}</div>
+    <div class="header-left">
+      <div class="project">PROYECTO: ${escapeHtml(proforma.idProforma)}-${escapeHtml(proforma.nombreProyecto)}</div>
+      <div class="company">${escapeHtml(INSTITUTIONAL_COMPANY.nombre)}</div>
+      <div class="company-meta">${escapeHtml(INSTITUTIONAL_COMPANY.direccion)}</div>
+      <div class="company-meta">RUC: ${escapeHtml(INSTITUTIONAL_COMPANY.ruc)}</div>
+    </div>
+    ${logoDataUrl ? `<div class="header-right"><img src="${logoDataUrl}" alt="Logo" /></div>` : ''}
   </div>
 
   <div class="meta-grid">
     <div class="meta-row"><span class="meta-label">CLIENTE</span><span>${escapeHtml(customer.nombreCliente)}</span></div>
     <div class="meta-row"><span class="meta-label">RUC</span><span>${escapeHtml(customer.rucCedula)}</span></div>
     <div class="meta-row"><span class="meta-label">MONTO CONTRATO</span><span>${formatCurrency(proforma.montoContrato)}</span></div>
-    <div class="meta-row"><span class="meta-label">TIEMPO EJECUCIÓN</span><span>${escapeHtml(proforma.tiempoEjecucion ?? '0')}</span></div>
+    <div class="meta-row"><span class="meta-label">TIEMPO EJECUCIÓN</span><span>${escapeHtml(proforma.tiempoEjecucion ?? '0')} días</span></div>
     <div class="meta-row"><span class="meta-label">FECHA</span><span>${formatDate(proforma.fecha)}</span></div>
   </div>
 
@@ -140,8 +157,15 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
   </table>
 
   <div class="totals">
-    <div class="totals-row"><span class="label">TOTAL EN DÍAS</span><span class="value">${escapeHtml(proforma.tiempoEjecucion ?? '0')}</span></div>
+    <div class="totals-row"><span class="label">TOTAL EN DÍAS</span><span class="value">${escapeHtml(proforma.tiempoEjecucion ?? '0')} días</span></div>
     <div class="totals-row"><span class="label">SUBTOTAL</span><span class="value">${formatCurrency(proforma.subtotal)}</span></div>
+    ${descuentoTotal > 0 ? `
+    <div class="totals-row discount">
+      <span class="label">DESCUENTO (${descuentoPorcentaje.toFixed(2)}%)</span>
+      <span class="value">-${formatCurrency(descuentoTotal)}</span>
+    </div>
+    <div class="totals-row"><span class="label">SUBTOTAL CON DESCUENTO</span><span class="value">${formatCurrency(proforma.subtotal - descuentoTotal)}</span></div>
+    ` : ''}
     ${showIva ? `<div class="totals-row"><span class="label">IVA</span><span class="value">${formatCurrency(proforma.iva)}</span></div>` : ''}
     <div class="totals-row total"><span class="label total-label">TOTAL</span><span class="value">${formatCurrency(proforma.totalGeneral)}</span></div>
   </div>

@@ -36,6 +36,8 @@ export interface ProformaWorkbookResult {
  */
 export async function buildProformaWorkbook(
   proforma: Proforma,
+  descuentoTotal: number = 0,
+  descuentoPorcentaje: number = 0,
 ): Promise<ProformaWorkbookResult> {
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Construproformas — Construmétrica';
@@ -61,7 +63,7 @@ export async function buildProformaWorkbook(
   buildTableHeader(sheet);
 
   const layout = buildDynamicItemRows(sheet, proforma.detalles, EXCEL_LAYOUT.itemsStartRow);
-  const afterTotalsRow = buildTotalsBlock(sheet, proforma, layout);
+  const afterTotalsRow = buildTotalsBlock(sheet, proforma, layout, descuentoTotal, descuentoPorcentaje);
   layout.notesStartRow = afterTotalsRow;
   layout.contactStartRow = buildNotesBlock(sheet, proforma, afterTotalsRow);
   const contactEndRow = buildContactBlock(sheet, proforma, layout.contactStartRow);
@@ -106,7 +108,7 @@ function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void
     [CLIENT_META_LABELS.cliente, customer.nombreCliente],
     [CLIENT_META_LABELS.ruc, customer.rucCedula],
     [CLIENT_META_LABELS.montoContrato, formatCurrency(proforma.montoContrato)],
-    [CLIENT_META_LABELS.tiempoEjecucion, proforma.tiempoEjecucion ?? '0'],
+    [CLIENT_META_LABELS.tiempoEjecucion, proforma.tiempoEjecucion ? `${proforma.tiempoEjecucion} días` : '0 días'],
     [CLIENT_META_LABELS.fecha, formatDate(proforma.fecha)],
   ];
 

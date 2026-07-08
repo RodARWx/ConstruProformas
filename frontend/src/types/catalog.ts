@@ -8,6 +8,7 @@ export interface CatalogItem {
   categoriaNombre?: string | null
   diasLaborables?: number
   ivaPercentage?: number
+  discountPercentage?: number
 }
 
 export interface CreateCatalogItemPayload {
@@ -18,6 +19,7 @@ export interface CreateCatalogItemPayload {
   categoriaNombre?: string
   diasLaborables?: number
   ivaPercentage?: number
+  discountPercentage?: number
 }
 
 export type UpdateCatalogItemPayload = Partial<CreateCatalogItemPayload>
