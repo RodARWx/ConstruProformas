@@ -200,7 +200,8 @@ export function CustomerForm({
           }
           error={errors.nombreCliente}
           required
-          disabled={isSubmitting}
+          disabled={isSubmitting || Boolean(matchingCustomerWarning)}
+          hint={matchingCustomerWarning ? "Bloqueado porque este cliente ya existe." : undefined}
         />
 
         {matchingCustomerWarning && (

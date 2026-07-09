@@ -66,7 +66,7 @@ export function renderProformaHtml(
     }
     .header-left { flex: 1; }
     .header-right { margin-left: 16px; }
-    .header-right img { max-height: 60px; width: auto; }
+    .header-right img { max-height: 48px; width: auto; }
     .project { font-size: ${BRAND_FONT_SIZE}px; margin-bottom: 8px; }
     .company { text-align: center; font-size: ${BRAND_FONT_SIZE}px; margin: 4px 0; }
     .company-meta { text-align: center; font-size: ${BRAND_FONT_SIZE}px; color: ${BRAND_COLORS.secondaryText}; }
