@@ -1,6 +1,7 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { ExportService } from './export.service';
-import { ExportController } from './export.controller'; // <-- Importar
+import { ExportController } from './export.controller';
+import { ProformaExportController } from './proforma-export.controller';
 import { ProformaExcelExportService } from './services/proforma-excel-export.service';
 import { ProformaPdfExportService } from './services/proforma-pdf-export.service';
 import { ProformaHtmlPdfService } from './services/proforma-html-pdf.service';
@@ -12,7 +13,7 @@ import { CatalogModule } from '../catalog/catalog.module';
     forwardRef(() => ProformasModule),
     CatalogModule,
   ],
-  controllers: [ExportController], // <-- Agregar
+  controllers: [ExportController, ProformaExportController],
   providers: [
     ExportService,
     ProformaExcelExportService,

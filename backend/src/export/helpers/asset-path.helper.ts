@@ -5,6 +5,9 @@ import { Profile } from '../../profiles/entities/profile.entity';
 /** Resuelve la raíz del backend (dist o fuente en desarrollo). */
 export function getBackendRoot(): string {
   const cwd = process.cwd();
+  if (existsSync(join(cwd, 'backend', 'assets'))) {
+    return join(cwd, 'backend');
+  }
   if (existsSync(join(cwd, 'assets'))) {
     return cwd;
   }

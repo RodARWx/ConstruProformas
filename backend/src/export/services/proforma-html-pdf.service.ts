@@ -22,6 +22,9 @@ export class ProformaHtmlPdfService {
     let logoDataUrl: string | undefined;
     if (logoBuffer) {
       logoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+      this.logger.log(`Logo cargado exitosamente en PDF (${logoBuffer.length} bytes)`);
+    } else {
+      this.logger.warn(`Logo NO cargado en PDF (readLogoBuffer devolvió null)`);
     }
 
     // --- Derivar descuento de forma directa y limpia ---

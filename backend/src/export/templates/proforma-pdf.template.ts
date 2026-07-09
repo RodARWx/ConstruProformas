@@ -192,8 +192,9 @@ export function renderProformaHtml(
 </html>`;
 }
 
-function escapeHtml(value: string): string {
-  return value
+function escapeHtml(value: any): string {
+  const str = value === null || value === undefined ? '' : String(value);
+  return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')

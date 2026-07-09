@@ -47,10 +47,12 @@ export class ProformasService {
   private readonly defaultRelations = ['detalles', 'profile', 'customer'] as const;
 
   async findAll(): Promise<Proforma[]> {
-    return this.proformaRepository.find({
+    const proformas = await this.proformaRepository.find({
       relations: [...this.defaultRelations],
-      order: { fecha: 'DESC' },
     });
+    return proformas.sort((a, b) =>
+      b.idProforma.localeCompare(a.idProforma, undefined, { numeric: true, sensitivity: 'base' })
+    );
   }
 
   async findTrash(): Promise<Proforma[]> {
