@@ -91,6 +91,22 @@ export async function exportProforma(
   )
 }
 
+export async function exportProformaExcel(
+  idProforma: string,
+): Promise<ProformaExportResult> {
+  return apiPost<ProformaExportResult>(
+    `/proformas/${encodeURIComponent(idProforma)}/export/excel`,
+  )
+}
+
+export async function exportProformaPdf(
+  idProforma: string,
+): Promise<ProformaExportResult> {
+  return apiPost<ProformaExportResult>(
+    `/proformas/${encodeURIComponent(idProforma)}/export/pdf`,
+  )
+}
+
 export async function syncProformas(
   proformas: CreateProformaPayload[],
 ): Promise<SyncProformasResult> {
