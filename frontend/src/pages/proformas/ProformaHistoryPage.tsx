@@ -7,7 +7,8 @@ import {
   cloneProforma,
   deleteProforma,
   downloadExportFile,
-  exportProforma,
+  exportProformaExcel,
+  exportProformaPdf,
   fetchNextProformaId,
   fetchProforma,
   fetchProformas,
@@ -26,6 +27,13 @@ export function ProformaHistoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  const [tempFilters, setTempFilters] = useState({
+    id: '',
+    proyecto: '',
+    cliente: '',
+    fechaDesde: '',
+    fechaHasta: '',
+  })
   const [filters, setFilters] = useState({
     id: '',
     proyecto: '',
@@ -50,27 +58,11 @@ export function ProformaHistoryPage() {
     void loadHistory()
   }, [loadHistory])
 
-  async function downloadExportedFiles(proforma: Proforma) {
-    const excelName = buildExportFilename(
-      proforma.idProforma,
-      proforma.nombreProyecto,
-      'xlsx',
-    )
-    const pdfName = buildExportFilename(
-      proforma.idProforma,
-      proforma.nombreProyecto,
-      'pdf',
-    )
-
-    await downloadExportFile(excelName)
-    await downloadExportFile(pdfName)
-  }
-
-  async function handleExport(proforma: Proforma) {
+  async function handleExportExcel(proforma: Proforma) {
     const { idProforma } = proforma
     setActiveId(idProforma)
     try {
-      const result = await exportProforma(idProforma)
+      const result = await exportProformaExcel(idProforma)
       const refreshed = await fetchProforma(idProforma)
       setItems((current) =>
         current.map((item) =>
@@ -79,41 +71,70 @@ export function ProformaHistoryPage() {
       )
 
       const excelFilename = result.excel?.filename
-      const pdfFilename = result.pdf?.filename
-
       if (excelFilename) {
         await downloadExportFile(excelFilename)
+        notify.success('Excel exportado', 'Archivo descargado en su dispositivo.')
       }
-      if (pdfFilename) {
-        await downloadExportFile(pdfFilename)
-      }
-
-      notify.success(
-        'Proforma exportada',
-        [
-          'Archivos descargados en su dispositivo.',
-          `Subtotal ${formatCurrency(refreshed.subtotal)} · IVA ${formatCurrency(refreshed.iva)} · Total ${formatCurrency(refreshed.totalGeneral)}`,
-          refreshed.tiempoEjecucion
-            ? `Tiempo de ejecución: ${refreshed.tiempoEjecucion} días`
-            : undefined,
-        ]
-          .filter(Boolean)
-          .join(' · '),
-      )
     } catch (error) {
-      notify.error('No se pudo exportar la proforma', getApiErrorMessage(error))
+      notify.error('No se pudo exportar a Excel', getApiErrorMessage(error))
     } finally {
       setActiveId(null)
     }
   }
 
-  async function handleDownload(proforma: Proforma) {
+  async function handleExportPdf(proforma: Proforma) {
+    const { idProforma } = proforma
+    setActiveId(idProforma)
+    try {
+      const result = await exportProformaPdf(idProforma)
+      const refreshed = await fetchProforma(idProforma)
+      setItems((current) =>
+        current.map((item) =>
+          item.idProforma === idProforma ? refreshed : item,
+        ),
+      )
+
+      const pdfFilename = result.pdf?.filename
+      if (pdfFilename) {
+        await downloadExportFile(pdfFilename)
+        notify.success('PDF exportado', 'Archivo descargado en su dispositivo.')
+      }
+    } catch (error) {
+      notify.error('No se pudo exportar a PDF', getApiErrorMessage(error))
+    } finally {
+      setActiveId(null)
+    }
+  }
+
+  async function handleDownloadExcel(proforma: Proforma) {
+    const excelName = buildExportFilename(
+      proforma.idProforma,
+      proforma.nombreProyecto,
+      'xlsx',
+    )
     setActiveId(proforma.idProforma)
     try {
-      await downloadExportedFiles(proforma)
-      notify.success('Descarga iniciada', 'PDF y Excel exportados previamente.')
+      await downloadExportFile(excelName)
+      notify.success('Descarga iniciada', 'Excel descargado.')
     } catch (error) {
-      notify.error('No se pudieron descargar los archivos', getApiErrorMessage(error))
+      notify.error('No se pudo descargar el Excel', getApiErrorMessage(error))
+    } finally {
+      setActiveId(null)
+    }
+  }
+
+  async function handleDownloadPdf(proforma: Proforma) {
+    const pdfName = buildExportFilename(
+      proforma.idProforma,
+      proforma.nombreProyecto,
+      'pdf',
+    )
+    setActiveId(proforma.idProforma)
+    try {
+      await downloadExportFile(pdfName)
+      notify.success('Descarga iniciada', 'PDF descargado.')
+    } catch (error) {
+      notify.error('No se pudo descargar el PDF', getApiErrorMessage(error))
     } finally {
       setActiveId(null)
     }
@@ -253,23 +274,43 @@ export function ProformaHistoryPage() {
             Clonar proforma
           </Button>
           {row.status === 'EXPORTED' ? (
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => void handleDownload(row)}
-              disabled={activeId === row.idProforma}
-            >
-              Descargar PDF/Excel
-            </Button>
+            <>
+              <Button
+                type="button"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500"
+                onClick={() => void handleDownloadExcel(row)}
+                disabled={activeId === row.idProforma}
+              >
+                Descargar Excel
+              </Button>
+              <Button
+                type="button"
+                className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500"
+                onClick={() => void handleDownloadPdf(row)}
+                disabled={activeId === row.idProforma}
+              >
+                Descargar PDF
+              </Button>
+            </>
           ) : (
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => void handleExport(row)}
-              disabled={activeId === row.idProforma}
-            >
-              Exportar PDF/Excel
-            </Button>
+            <>
+              <Button
+                type="button"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500"
+                onClick={() => void handleExportExcel(row)}
+                disabled={activeId === row.idProforma}
+              >
+                Exportar Excel
+              </Button>
+              <Button
+                type="button"
+                className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500"
+                onClick={() => void handleExportPdf(row)}
+                disabled={activeId === row.idProforma}
+              >
+                Exportar PDF
+              </Button>
+            </>
           )}
           {pendingDeleteId === row.idProforma ? (
             <>
@@ -327,43 +368,52 @@ export function ProformaHistoryPage() {
             <Input
               label="ID"
               placeholder="CM-PROF-..."
-              value={filters.id}
+              value={tempFilters.id}
               onChange={(event) =>
-                setFilters((current) => ({ ...current, id: event.target.value }))
+                setTempFilters((current) => ({ ...current, id: event.target.value }))
               }
             />
             <Input
               label="Proyecto"
               placeholder="Nombre del proyecto"
-              value={filters.proyecto}
+              value={tempFilters.proyecto}
               onChange={(event) =>
-                setFilters((current) => ({ ...current, proyecto: event.target.value }))
+                setTempFilters((current) => ({ ...current, proyecto: event.target.value }))
               }
             />
             <Input
               label="Cliente"
               placeholder="Nombre cliente"
-              value={filters.cliente}
+              value={tempFilters.cliente}
               onChange={(event) =>
-                setFilters((current) => ({ ...current, cliente: event.target.value }))
+                setTempFilters((current) => ({ ...current, cliente: event.target.value }))
               }
             />
             <Input
               label="Fecha desde"
               type="date"
-              value={filters.fechaDesde}
+              value={tempFilters.fechaDesde}
               onChange={(event) =>
-                setFilters((current) => ({ ...current, fechaDesde: event.target.value }))
+                setTempFilters((current) => ({ ...current, fechaDesde: event.target.value }))
               }
             />
             <Input
               label="Fecha hasta"
               type="date"
-              value={filters.fechaHasta}
+              value={tempFilters.fechaHasta}
               onChange={(event) =>
-                setFilters((current) => ({ ...current, fechaHasta: event.target.value }))
+                setTempFilters((current) => ({ ...current, fechaHasta: event.target.value }))
               }
             />
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button
+              type="button"
+              onClick={() => setFilters(tempFilters)}
+              variant="primary"
+            >
+              Buscar
+            </Button>
           </div>
         </Card>
       </Section>

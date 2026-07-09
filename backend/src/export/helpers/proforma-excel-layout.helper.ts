@@ -3,7 +3,6 @@ import { Proforma } from '../../proformas/entities/proforma.entity';
 import { ProformaDetail } from '../../proformas/entities/proforma-detail.entity';
 import { BRAND_COLORS_ARGB } from '../constants/brand.constants';
 import {
-  INSTITUTIONAL_NOTES,
   TOTALS_LABELS,
 } from '../constants/institutional.constants';
 import { buildUserNotesForExport } from '../../proformas/helpers/proforma-notes.helper';
@@ -205,7 +204,7 @@ export function buildNotesBlock(
   sheet.getCell(`A${row}`).alignment = { vertical: 'middle' };
   row += 1;
 
-  const allNotes = [...INSTITUTIONAL_NOTES, ...buildUserNotesForExport(proforma.notas)];
+  const allNotes = buildUserNotesForExport(proforma.notas);
 
   allNotes.forEach((note) => {
     sheet.mergeCells(`A${row}:G${row}`);

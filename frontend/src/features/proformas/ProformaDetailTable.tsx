@@ -201,7 +201,7 @@ export function ProformaDetailTable() {
                             type="number"
                             min="0"
                             step="any"
-                            value={line.cantidad}
+                            value={line.cantidad === 0 ? '' : line.cantidad}
                             onChange={(event) =>
                               handleUpdateLine(line.localId, {
                                 cantidad: parseDecimalInput(event.target.value, 0),
@@ -217,7 +217,7 @@ export function ProformaDetailTable() {
                             type="number"
                             min="0"
                             step="any"
-                            value={line.costoUnitario}
+                            value={line.costoUnitario === 0 ? '' : line.costoUnitario}
                             onChange={(event) =>
                               handleUpdateLine(line.localId, {
                                 costoUnitario: parseDecimalInput(event.target.value, 0),

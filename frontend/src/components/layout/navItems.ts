@@ -23,7 +23,7 @@ export const mainNavItems: NavItem[] = [
   },
   {
     to: '/proformas',
-    label: 'Historial',
+    label: 'Historial de proformas',
     shortLabel: 'Historial',
     icon: 'history',
     end: true,
