@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { Button, Card, Input } from '../../components/ui'
 import { getApiErrorMessage, isApiConflict } from '../../lib/api'
+import { searchCustomers } from './customersApi'
 import type { Customer } from '../../types/customer'
 import type {
   CreateCustomerPayload,
@@ -58,6 +59,48 @@ export function CustomerForm({
       setRucConflictMessage(undefined)
     }
   }, [editingCustomer])
+
+  const [matchingCustomerWarning, setMatchingCustomerWarning] = useState<string | undefined>()
+
+  useEffect(() => {
+    const ident = values.rucCedula.trim()
+    if (ident.length < 10) {
+      setMatchingCustomerWarning(undefined)
+      return
+    }
+
+    const baseIdent = ident.slice(0, 10)
+    const controller = new AbortController()
+
+    searchCustomers(baseIdent, 5, controller.signal)
+      .then((results) => {
+        const match = results.find(
+          (c) =>
+            c.rucCedula.startsWith(baseIdent) &&
+            (!editingCustomer || c.id !== editingCustomer.id),
+        )
+
+        if (match) {
+          setValues((current) => ({
+            ...current,
+            nombreCliente: match.nombreCliente,
+          }))
+          setMatchingCustomerWarning(
+            `Se detectó un cliente coincidente (Cédula/RUC: ${match.rucCedula}). El nombre se ha autocompletado para consistencia.`,
+          )
+        } else {
+          setMatchingCustomerWarning(undefined)
+        }
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return
+        console.error('Error al validar Cédula/RUC coincidente', err)
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [values.rucCedula, editingCustomer])
 
   function validate(): boolean {
     const nextErrors: Partial<Record<keyof CustomerFormValues, string>> = {}
@@ -145,6 +188,12 @@ export function CustomerForm({
           required
           disabled={isSubmitting}
         />
+
+        {matchingCustomerWarning && (
+          <p className="text-xs text-brand-coral font-semibold sm:col-span-2 -mt-2">
+            ⚠️ {matchingCustomerWarning}
+          </p>
+        )}
 
         <Input
           label="Teléfono"

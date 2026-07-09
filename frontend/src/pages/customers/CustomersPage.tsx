@@ -127,7 +127,10 @@ export function CustomersPage() {
         <Button
           type="button"
           variant="secondary"
-          onClick={() => setEditingCustomer(row)}
+          onClick={() => {
+            setEditingCustomer(row)
+            document.getElementById('customer-form-container')?.scrollIntoView({ behavior: 'smooth' })
+          }}
           disabled={isSubmitting}
         >
           Editar
@@ -153,12 +156,14 @@ export function CustomersPage() {
         title="Gestión de clientes"
         description="Registre clientes nuevos o actualice los existentes."
       >
-        <CustomerForm
-          editingCustomer={editingCustomer}
-          isSubmitting={isSubmitting}
-          onSubmit={handleFormSubmit}
-          onCancelEdit={() => setEditingCustomer(null)}
-        />
+        <div id="customer-form-container">
+          <CustomerForm
+            editingCustomer={editingCustomer}
+            isSubmitting={isSubmitting}
+            onSubmit={handleFormSubmit}
+            onCancelEdit={() => setEditingCustomer(null)}
+          />
+        </div>
       </Section>
 
       <Section

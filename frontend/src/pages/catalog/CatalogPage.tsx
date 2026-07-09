@@ -168,6 +168,7 @@ export function CatalogPage() {
             onClick={() => {
               setPendingDeleteId(null)
               setEditingItem(row)
+              document.getElementById('catalog-form-container')?.scrollIntoView({ behavior: 'smooth' })
             }}
             disabled={isSubmitting}
           >
@@ -278,12 +279,14 @@ export function CatalogPage() {
         description="Cree, edite y elimine rubros. Use los filtros para navegar listas grandes."
       >
         <div className="space-y-5">
-          <CatalogForm
-            editingItem={editingItem}
-            isSubmitting={isSubmitting}
-            onSubmit={handleFormSubmit}
-            onCancelEdit={() => setEditingItem(null)}
-          />
+          <div id="catalog-form-container">
+            <CatalogForm
+              editingItem={editingItem}
+              isSubmitting={isSubmitting}
+              onSubmit={handleFormSubmit}
+              onCancelEdit={() => setEditingItem(null)}
+            />
+          </div>
 
           <Card>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

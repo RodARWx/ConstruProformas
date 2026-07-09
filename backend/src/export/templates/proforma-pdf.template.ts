@@ -1,7 +1,7 @@
 import { Proforma } from '../../proformas/entities/proforma.entity';
 import { resolveProformaCustomerSnapshot } from '../../proformas/helpers/proforma-customer-snapshot.helper';
 import { BRAND_COLORS, BRAND_FONTS, BRAND_FONT_SIZE } from '../constants/brand.constants';
-import { INSTITUTIONAL_COMPANY, INSTITUTIONAL_NOTES } from '../constants/institutional.constants';
+import { INSTITUTIONAL_COMPANY } from '../constants/institutional.constants';
 import { buildUserNotesForExport } from '../../proformas/helpers/proforma-notes.helper';
 import { buildEmbeddedFontCss } from '../helpers/brand-fonts.helper';
 import { formatCurrency, formatDate } from '../helpers/filename.helper';
@@ -29,7 +29,7 @@ export function renderProformaHtml(proforma: Proforma, qrDataUrl?: string): stri
     })
     .join('\n');
 
-  const notes = [...INSTITUTIONAL_NOTES, ...buildUserNotesForExport(proforma.notas)];
+  const notes = buildUserNotesForExport(proforma.notas);
 
   const notesHtml = notes
     .map((note) => `<p class="note-line">${escapeHtml(note)}</p>`)
