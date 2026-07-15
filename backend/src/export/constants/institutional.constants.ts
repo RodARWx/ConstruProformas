@@ -1,6 +1,7 @@
 /** Datos fijos de cabecera institucional */
 export const INSTITUTIONAL_COMPANY = {
   nombre: 'CONSTRUMÉTRICA CIA. LTDA.',
+  razonSocial: 'CONSTRUMÉTRICA INGENIEROS METRICAASOCIADOS CIA. LTDA.',
   ruc: '1793134424001',
   direccion: 'Urb. El Condado, Calle Gonzalo N° 73-232, LT370',
 } as const;

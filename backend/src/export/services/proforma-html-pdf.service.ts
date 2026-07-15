@@ -3,6 +3,7 @@ import { writeFile, unlink } from 'fs/promises';
 import puppeteer from 'puppeteer';
 import { Proforma } from '../../proformas/entities/proforma.entity';
 import { resolveExportQrBuffer } from '../helpers/qr-code.helper';
+import { readLogoBuffer } from '../helpers/asset-path.helper';
 import { renderProformaHtml } from '../templates/proforma-pdf.template';
 
 @Injectable()
@@ -15,7 +16,14 @@ export class ProformaHtmlPdfService {
   async renderToPdf(proforma: Proforma, outputPath: string): Promise<void> {
     const qrBuffer = await resolveExportQrBuffer(proforma.profile, proforma.idProforma);
     const qrDataUrl = `data:image/png;base64,${qrBuffer.toString('base64')}`;
-    const html = renderProformaHtml(proforma, qrDataUrl);
+
+    let logoDataUrl: string | undefined;
+    const logoBuffer = readLogoBuffer();
+    if (logoBuffer) {
+      logoDataUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    }
+
+    const html = renderProformaHtml(proforma, qrDataUrl, logoDataUrl);
 
     const htmlPath = `${outputPath}.html`;
     await writeFile(htmlPath, html, 'utf8');
@@ -36,7 +44,7 @@ export class ProformaHtmlPdfService {
         path: outputPath,
         format: 'A4',
         printBackground: true,
-        margin: { top: '12mm', bottom: '12mm', left: '10mm', right: '10mm' },
+        margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
       });
     } finally {
       await browser?.close().catch(() => undefined);
