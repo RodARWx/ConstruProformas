@@ -20,8 +20,7 @@ export class ProformaPdfExportService {
 
   /**
    * Genera PDF a partir del Excel exportado.
-   * 1. LibreOffice headless (local o Docker)
-   * 2. Fallback HTML + Puppeteer (con categorías del catálogo)
+   * HTML + Puppeteer (con categorías del catálogo)
    */
   async exportFromXlsx(
     proforma: Proforma,
@@ -34,24 +33,9 @@ export class ProformaPdfExportService {
     );
     const absolutePath = join(getExportsDirectory(), filename);
 
-    const conversion = await convertXlsxToPdf(xlsxAbsolutePath, getExportsDirectory());
-
-    if (conversion) {
-      this.logger.log(
-        `PDF vía LibreOffice (${conversion.method}) para ${proforma.idProforma}`,
-      );
-
-      if (conversion.pdfPath !== absolutePath && existsSync(conversion.pdfPath)) {
-        const { renameSync } = await import('fs');
-        renameSync(conversion.pdfPath, absolutePath);
-      }
-    } else {
-      this.logger.warn(
-        `LibreOffice no disponible; usando fallback Puppeteer para ${proforma.idProforma}`,
-      );
-      const prepared = await this.excelExportService.prepareForExport(proforma);
-      await this.htmlPdfService.renderToPdf(prepared, absolutePath);
-    }
+    this.logger.log(`Generando PDF vía Puppeteer (HTML) para ${proforma.idProforma}`);
+    const prepared = await this.excelExportService.prepareForExport(proforma);
+    await this.htmlPdfService.renderToPdf(prepared, absolutePath);
 
     return {
       filename,
