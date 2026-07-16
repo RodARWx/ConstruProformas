@@ -70,7 +70,6 @@ export function renderProformaHtml(
       border: 2px solid #000000;
       display: flex;
       flex-direction: column;
-      height: 100%;
       width: 100%;
       overflow: hidden;
     }
@@ -78,6 +77,11 @@ export function renderProformaHtml(
     /* ------- Estilos compartidos de secciones ------- */
     section, footer {
       border-bottom: 1.5px solid #000000;
+    }
+
+    /* Eliminar bordes alrededor de razón social */
+    .section-razon-social {
+      border-bottom: none;
     }
 
     .section-footer {
@@ -294,7 +298,6 @@ export function renderProformaHtml(
     .section-notas {
       border-bottom: none;
       padding: 6px 14px;
-      flex: 1;
     }
 
     .section-notas .notas-title {
@@ -316,7 +319,7 @@ export function renderProformaHtml(
       align-items: flex-end;
       justify-content: space-between;
       padding: 8px 14px;
-      margin-top: auto;
+      margin-top: 50px;
     }
 
     .footer-left {
@@ -377,7 +380,7 @@ export function renderProformaHtml(
         <span class="label-bold">OBJETO DE COMPRA:</span>
       </div>
       <div class="header-center">
-        ${escapeHtml(proforma.idProforma)} PROFORMA ${escapeHtml(proforma.nombreProyecto)}
+        ${escapeHtml(proforma.idProforma.toUpperCase())} PROFORMA ${escapeHtml(proforma.nombreProyecto.toUpperCase())}
       </div>
       <div class="header-right">
         ${logoDataUrl ? `<img src="${logoDataUrl}" alt="CONSTRUMÉTRICA" class="logo">` : ''}

@@ -44,11 +44,12 @@ export class ProformaHtmlPdfService {
         path: outputPath,
         format: 'A4',
         printBackground: true,
+        scale: 0.7,
         margin: { top: '15mm', bottom: '15mm', left: '15mm', right: '15mm' },
       });
     } finally {
       await browser?.close().catch(() => undefined);
-      await unlink(htmlPath).catch(() => undefined);
+      await unlink(htmlPath).catch(() => undefined); // Comentado para depuración visual
     }
 
     this.logger.warn(
