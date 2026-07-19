@@ -26,6 +26,9 @@ export class Customer {
   @Column({ type: 'text', nullable: true })
   correo: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  codigoPostal: string | null;
+
   /** Porcentaje de descuento del cliente (demo). */
   @Column({ type: 'real', default: 0 })
   discountPercentage: number;

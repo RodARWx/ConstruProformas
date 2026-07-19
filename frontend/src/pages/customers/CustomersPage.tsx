@@ -121,6 +121,11 @@ export function CustomersPage() {
       render: (row) => row.correo ?? '—',
     },
     {
+      key: 'codigoPostal',
+      header: 'Cód. Postal',
+      render: (row) => row.codigoPostal ?? '—',
+    },
+    {
       key: 'direccion',
       header: 'Dirección',
       render: (row) => row.direccion ?? '—',

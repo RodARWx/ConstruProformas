@@ -5,7 +5,8 @@ export interface Customer {
   direccion: string | null
   telefono: string | null
   correo: string | null
-  discountPercentage?: number
+  codigoPostal: string | null
+  discountPercentage: number
 }
 
 export interface CreateCustomerPayload {
@@ -14,6 +15,7 @@ export interface CreateCustomerPayload {
   telefono?: string
   correo?: string
   direccion?: string
+  codigoPostal?: string
   discountPercentage?: number
 }
 

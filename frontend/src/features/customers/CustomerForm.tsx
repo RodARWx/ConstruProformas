@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react'
 import { Button, Card, Input } from '../../components/ui'
 import { getApiErrorMessage, isApiConflict } from '../../lib/api'
 import { searchCustomers } from './customersApi'
+import { isValidQuitoPostalCode } from '../../lib/quitoPostalCodes'
 import type { Customer } from '../../types/customer'
 import type {
   CreateCustomerPayload,
@@ -14,6 +15,7 @@ export interface CustomerFormValues {
   telefono: string
   correo: string
   direccion: string
+  codigoPostal: string
   discountPercentage: string
 }
 
@@ -23,6 +25,7 @@ const emptyValues: CustomerFormValues = {
   telefono: '',
   correo: '',
   direccion: '',
+  codigoPostal: '',
   discountPercentage: '0',
 }
 
@@ -55,6 +58,7 @@ export function CustomerForm({
         telefono: editingCustomer.telefono ?? '',
         correo: editingCustomer.correo ?? '',
         direccion: editingCustomer.direccion ?? '',
+        codigoPostal: editingCustomer.codigoPostal ?? '',
         discountPercentage: String(editingCustomer.discountPercentage ?? 0),
       })
       setErrors({})
@@ -123,6 +127,11 @@ export function CustomerForm({
         nextErrors.discountPercentage = 'Ingrese un número mayor o igual a 0'
       }
     }
+    if (!values.codigoPostal.trim()) {
+      nextErrors.codigoPostal = 'El código postal es obligatorio'
+    } else if (!isValidQuitoPostalCode(values.codigoPostal.trim())) {
+      nextErrors.codigoPostal = 'Debe ser un código válido de Quito (ej. 170101)'
+    }
 
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0
@@ -138,6 +147,7 @@ export function CustomerForm({
       telefono: values.telefono.trim() || undefined,
       correo: values.correo.trim() || undefined,
       direccion: values.direccion.trim() || undefined,
+      codigoPostal: values.codigoPostal.trim(),
       discountPercentage: Number(values.discountPercentage || 0),
     }
 
@@ -242,6 +252,19 @@ export function CustomerForm({
           }
           disabled={isSubmitting}
           hint="Opcional."
+        />
+
+        <Input
+          label="Código Postal"
+          placeholder="Ej. 170101"
+          value={values.codigoPostal}
+          onChange={(event) =>
+            setValues((current) => ({ ...current, codigoPostal: event.target.value }))
+          }
+          error={errors.codigoPostal}
+          required
+          disabled={isSubmitting}
+          hint="Solo válido para los 118 códigos postales de Quito."
         />
 
         <Input
