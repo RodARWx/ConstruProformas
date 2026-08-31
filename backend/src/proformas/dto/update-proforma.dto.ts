@@ -25,6 +25,10 @@ export class UpdateProformaDto {
   fecha?: string;
 
   @IsOptional()
+  @IsString()
+  tipoDias?: string;
+
+  @IsOptional()
   @IsEnum(ProformaStatus)
   status?: ProformaStatus;
 

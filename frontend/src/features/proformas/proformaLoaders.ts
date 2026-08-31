@@ -22,6 +22,7 @@ export function proformaToDraft(proforma: Proforma): ProformaDraft {
       direccion: customer.direccion,
       telefonoCliente: customer.telefono,
       fecha: proforma.fecha,
+      tipoDias: proforma.tipoDias ?? 'Días Laborables',
       profileId: proforma.profileId,
       notasLines: parseProformaNotes(proforma.notas),
     },

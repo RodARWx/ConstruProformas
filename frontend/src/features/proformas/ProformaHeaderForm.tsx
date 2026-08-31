@@ -349,6 +349,18 @@ export function ProformaHeaderForm() {
               required
               disabled={disabled}
             />
+
+            <Select
+              label="Tipo de días"
+              value={header.tipoDias || 'Días Laborables'}
+              onChange={(event) => setHeader({ tipoDias: event.target.value })}
+              options={[
+                { value: 'Días Laborables', label: 'Días Laborables' },
+                { value: 'Días Calendario', label: 'Días Calendario' },
+              ]}
+              required
+              disabled={disabled}
+            />
           </div>
         </Card>
       </Section>

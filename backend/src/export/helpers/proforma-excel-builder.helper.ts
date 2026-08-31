@@ -8,19 +8,21 @@ import {
   TABLE_HEADERS,
 } from '../constants/institutional.constants';
 import {
+  applyOuterContourBorder,
   excelThinBorder,
   fillSolid,
   fontBlack,
   fontBook,
   headerTableFont,
 } from '../constants/excel-styles.constants';
-import { readLogoBuffer } from './asset-path.helper';
+import { readLogoBuffer, resolveProformaExcelTemplatePath } from './asset-path.helper';
 import { formatCurrency, formatDate } from './filename.helper';
 import {
   buildContactBlock,
   buildDynamicItemRows,
   buildNotesBlock,
   buildTotalsBlock,
+  populateExcelTemplate,
   ProformaLayoutResult,
 } from './proforma-excel-layout.helper';
 import { resolveExportQrBuffer } from './qr-code.helper';
@@ -31,15 +33,38 @@ export interface ProformaWorkbookResult {
 }
 
 /**
- * Construye el libro Excel institucional DESDE CERO (sin plantilla).
- * Hoja "PROFORMA" con estructura fija + filas dinámicas.
+ * Construye el libro Excel institucional desde la plantilla .xlsx oficial o desde cero como fallback.
  */
 export async function buildProformaWorkbook(
   proforma: Proforma,
 ): Promise<ProformaWorkbookResult> {
+  const templatePath = resolveProformaExcelTemplatePath();
   const workbook = new ExcelJS.Workbook();
   workbook.creator = 'Construproformas — Construmétrica';
   workbook.created = new Date();
+
+  if (templatePath) {
+    await workbook.xlsx.readFile(templatePath);
+    const sheet = workbook.worksheets[0];
+
+    // Llenar metadatos en plantilla
+    sheet.getCell('B1').value = `OBJETO DE COMPRA: ${proforma.idProforma.toUpperCase()} PROFORMA ${proforma.nombreProyecto.toUpperCase()}`;
+    sheet.getCell('C4').value = proforma.idProforma;
+
+    const customer = resolveProformaCustomerSnapshot(proforma);
+    sheet.getCell('C5').value = customer.nombreCliente;
+    sheet.getCell('C6').value = customer.rucCedula;
+    sheet.getCell('C7').value = customer.direccion ?? '';
+    sheet.getCell('C10').value = formatDate(proforma.fecha);
+
+    const layout = populateExcelTemplate(sheet, proforma);
+    await embedImages(workbook, sheet, proforma, layout.contactEndRow);
+
+    const endRow = Math.max(layout.contactEndRow ?? 31, 31);
+    applyOuterContourBorder(sheet, 1, endRow, 1, 7, 'medium');
+
+    return { workbook, layout };
+  }
 
   const sheet = workbook.addWorksheet(EXCEL_SHEET_NAME, {
     views: [{ showGridLines: false }],
@@ -49,7 +74,7 @@ export async function buildProformaWorkbook(
   sheet.columns = [
     { width: 12 },
     { width: 36 },
-    { width: 14 },
+    { width: 22 },
     { width: 10 },
     { width: 12 },
     { width: 14 },
@@ -65,8 +90,12 @@ export async function buildProformaWorkbook(
   layout.notesStartRow = afterTotalsRow;
   layout.contactStartRow = buildNotesBlock(sheet, proforma, afterTotalsRow);
   const contactEndRow = buildContactBlock(sheet, proforma, layout.contactStartRow);
+  layout.contactEndRow = contactEndRow;
 
   await embedImages(workbook, sheet, proforma, contactEndRow);
+
+  const endRow = Math.max(contactEndRow, 31);
+  applyOuterContourBorder(sheet, 1, endRow, 1, 7, 'medium');
 
   return { workbook, layout };
 }
@@ -106,7 +135,10 @@ function buildClientMetadata(sheet: ExcelJS.Worksheet, proforma: Proforma): void
     [CLIENT_META_LABELS.cliente, customer.nombreCliente],
     [CLIENT_META_LABELS.ruc, customer.rucCedula],
     [CLIENT_META_LABELS.montoContrato, formatCurrency(proforma.montoContrato)],
-    [CLIENT_META_LABELS.tiempoEjecucion, proforma.tiempoEjecucion ?? '0'],
+    [
+      CLIENT_META_LABELS.tiempoEjecucion,
+      `${proforma.tiempoEjecucion ?? '0'} ${proforma.tipoDias ?? 'Días Laborables'}`,
+    ],
     [CLIENT_META_LABELS.fecha, formatDate(proforma.fecha)],
   ];
 
@@ -142,27 +174,32 @@ function buildTableHeader(sheet: ExcelJS.Worksheet): void {
     { col: 5, text: TABLE_HEADERS.row1.contratado },
   ];
 
+  // Aplica borde y fondo a todas las celdas de la cabecera (A12:G13)
+  for (let r = row1; r <= row2; r++) {
+    for (let c = 1; c <= 7; c++) {
+      const cell = sheet.getRow(r).getCell(c);
+      cell.border = excelThinBorder;
+      cell.fill = headerFill;
+    }
+  }
+
   headers11.forEach(({ col, text }) => {
     const cell = row11.getCell(col);
     cell.value = text;
     cell.font = headerTableFont();
-    cell.fill = headerFill;
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
-    cell.border = excelThinBorder;
   });
 
   ['CANTIDAD', 'C. UNIT.', 'TOTAL'].forEach((text, index) => {
     const cell = row12.getCell(5 + index);
     cell.value = text;
     cell.font = headerTableFont();
-    cell.fill = headerFill;
     cell.alignment = { horizontal: 'center', vertical: 'middle' };
-    cell.border = excelThinBorder;
   });
 
-  row11.height = 26;
-  row12.height = 22;
 }
+
+
 
 async function embedImages(
   workbook: ExcelJS.Workbook,
@@ -170,35 +207,54 @@ async function embedImages(
   proforma: Proforma,
   contactEndRow: number,
 ): Promise<void> {
-  const logoBuffer = readLogoBuffer();
-  if (logoBuffer) {
-    const logoId = workbook.addImage({
-      // ExcelJS typings esperan Buffer legacy; Node 22 usa Buffer generic
-      buffer: logoBuffer as never,
-      extension: 'png',
-    });
-    sheet.addImage(logoId, {
-      tl: { col: 5.2, row: 0.1 },
-      ext: { width: 130, height: 42 },
-    });
+  try {
+    const logoBuffer = readLogoBuffer();
+    if (logoBuffer) {
+      const logoId = workbook.addImage({
+        // ExcelJS typings esperan Buffer legacy; Node 22 usa Buffer generic
+        buffer: logoBuffer as never,
+        extension: 'png',
+      });
+      sheet.addImage(logoId, {
+        tl: { col: 5.123, row: 0.2 },
+        ext: { width: 165, height: 52 },
+      });
+    }
+  } catch (err) {
+    console.error('Error al incrustar el logo en Excel:', err);
   }
 
-  const qrBuffer = await resolveExportQrBuffer(proforma.profile, proforma.idProforma);
-  const qrId = workbook.addImage({
-    buffer: qrBuffer as never,
-    extension: 'png',
-  });
+  try {
+    const qrBuffer = await resolveExportQrBuffer(proforma.profile, proforma.idProforma);
+    if (qrBuffer) {
+      const qrId = workbook.addImage({
+        buffer: qrBuffer as never,
+        extension: 'png',
+      });
 
-  const { profileQr } = EXCEL_LAYOUT;
-  const lastContactRow = contactEndRow - 1;
-  const qrTopRow =
-    lastContactRow + profileQr.bottomRowOffset - profileQr.heightInRows;
+      const { profileQr } = EXCEL_LAYOUT;
+      const lastContactRow = contactEndRow - 1;
+      const qrTopRow = Math.max(0, lastContactRow + profileQr.bottomRowOffset - profileQr.heightInRows);
+      const topRowInt = Math.floor(qrTopRow);
+      const topRowFrac = qrTopRow - topRowInt;
 
-  sheet.addImage(qrId, {
-    tl: { col: profileQr.tlCol, row: qrTopRow },
-    ext: { width: profileQr.sizePx, height: profileQr.sizePx },
-  });
+      const colOffUnit = Math.round(((profileQr as any).colOffsetPx ?? 90) * 10000);
 
-  // Reserva fila vacía tras el bloque de contacto (como en plantilla de referencia)
-  sheet.getRow(contactEndRow + 1).height = 15.5;
+      sheet.addImage(qrId, {
+        tl: {
+          nativeCol: 5,
+          nativeColOff: colOffUnit,
+          nativeRow: topRowInt,
+          nativeRowOff: Math.round(topRowFrac * 180000),
+        } as any,
+        ext: { width: profileQr.sizePx, height: profileQr.sizePx },
+      });
+    }
+  } catch (err) {
+    console.error('Error al incrustar el QR en Excel:', err);
+  }
+
+  try {
+    sheet.getRow(contactEndRow + 1).height = 15.5;
+  } catch { }
 }

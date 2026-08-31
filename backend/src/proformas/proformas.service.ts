@@ -96,6 +96,7 @@ export class ProformasService {
       idProforma: dto.idProforma,
       nombreProyecto: dto.nombreProyecto,
       tiempoEjecucion: calculated.tiempoEjecucion,
+      tipoDias: dto.tipoDias ?? 'Días Laborables',
       fecha: dto.fecha,
       notas: serializeProformaNotes(dto.notas),
       status: dto.status ?? ProformaStatus.DRAFT,
@@ -136,6 +137,7 @@ export class ProformasService {
 
     if (dto.nombreProyecto !== undefined) proforma.nombreProyecto = dto.nombreProyecto;
     if (dto.fecha !== undefined) proforma.fecha = dto.fecha;
+    if (dto.tipoDias !== undefined) proforma.tipoDias = dto.tipoDias;
     if (dto.status !== undefined) proforma.status = dto.status;
     if (dto.profileId !== undefined) proforma.profileId = dto.profileId;
     if (dto.customerId !== undefined) proforma.customerId = dto.customerId;
@@ -178,8 +180,9 @@ export class ProformasService {
 
     const clone = this.proformaRepository.create({
       idProforma: suggestedId,
-      nombreProyecto: `${source.nombreProyecto} (copia)`,
+      nombreProyecto: `${source.nombreProyecto} (Copia)`,
       tiempoEjecucion: calculated.tiempoEjecucion,
+      tipoDias: source.tipoDias ?? 'Días Laborables',
       fecha: new Date().toISOString().slice(0, 10),
       notas: source.notas,
       status: ProformaStatus.DRAFT,

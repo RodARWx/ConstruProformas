@@ -19,6 +19,7 @@ export interface CreateProformaPayload {
   idProforma: string
   nombreProyecto: string
   fecha: string
+  tipoDias?: string
   profileId: number
   customerId: number
   detalles: ProformaDetailPayload[]
@@ -51,6 +52,7 @@ export function draftToCreatePayload(
     idProforma: header.idProforma.trim(),
     nombreProyecto: header.nombreProyecto.trim(),
     fecha: header.fecha,
+    tipoDias: header.tipoDias || 'Días Laborables',
     profileId: Number(header.profileId),
     customerId: Number(header.customerId),
     detalles: detalles.map(mapDetailLine),
@@ -65,6 +67,7 @@ export function draftToUpdatePayload(
   const {
     nombreProyecto,
     fecha,
+    tipoDias,
     profileId,
     customerId,
     detalles: lineas,
@@ -73,6 +76,7 @@ export function draftToUpdatePayload(
   return {
     nombreProyecto,
     fecha,
+    tipoDias,
     profileId,
     customerId,
     detalles: lineas,

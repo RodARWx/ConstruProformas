@@ -43,12 +43,12 @@ export const EXCEL_LAYOUT = {
   itemsStartRow: 14,
   /** Posición del QR WhatsApp alineado al borde derecho de la tabla (col G) */
   profileQr: {
-    tlCol: 6.05,
-    sizePx: 90,
+    colOffsetPx: 10,
+    sizePx: 186,
     /** Filas de alto aproximado del QR para alinear el borde inferior con el contacto */
-    heightInRows: 4.6,
+    heightInRows: 9.2,
     /** Ajuste fino del borde inferior respecto a la última fila de contacto */
-    bottomRowOffset: 0.92,
+    bottomRowOffset: 0.8,
   },
 } as const;
 

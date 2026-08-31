@@ -430,7 +430,11 @@ export function renderProformaHtml(
       </div>
       <div class="cliente-row">
         <span class="label-bold">TIEMPO DE ENTREGA:</span>
-        <span class="cliente-value">${escapeHtml(proforma.tiempoEjecucion ?? '0')} Días Calendario</span>
+        <span class="cliente-value">${escapeHtml(proforma.tiempoEjecucion ?? '0')} ${escapeHtml(proforma.tipoDias ?? 'Días Laborables')}</span>
+      </div>
+      <div class="cliente-row">
+        <span class="label-bold">FECHA:</span>
+        <span class="cliente-value">${escapeHtml(formatDate(proforma.fecha))}</span>
       </div>
     </section>
 

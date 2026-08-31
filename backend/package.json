@@ -16,7 +16,8 @@
     "test:cov": "jest --coverage",
     "seed:catalog": "ts-node scripts/seed-catalog-from-excel.ts",
     "test:edge-cases": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-edge-cases.ps1",
-    "export:test": "node scripts/generate-test-export.js"
+    "export:test": "node scripts/generate-test-export.js",
+    "preview": "ts-node scripts/preview-excel.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

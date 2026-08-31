@@ -25,6 +25,10 @@ export class Proforma {
   @Column({ type: 'text', nullable: true })
   tiempoEjecucion: string | null;
 
+  /** Tipo de días para tiempo de ejecución ("Días Laborables" | "Días Calendario"). */
+  @Column({ type: 'text', default: 'Días Laborables' })
+  tipoDias: string;
+
   @Column({ type: 'date' })
   fecha: string;
 

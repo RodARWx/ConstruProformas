@@ -23,6 +23,7 @@ export interface Proforma {
   idProforma: string
   nombreProyecto: string
   tiempoEjecucion: string | null
+  tipoDias?: string | null
   fecha: string
   notas: string | null
   subtotal: number
@@ -68,6 +69,7 @@ export interface ProformaHeaderDraft {
   direccion: string
   telefonoCliente: string
   fecha: string
+  tipoDias: string
   profileId: number | ''
   /** Líneas de notas adicionales (cada una se exporta con viñeta). */
   notasLines: string[]
@@ -110,6 +112,7 @@ export function createEmptyHeaderDraft(
     direccion: '',
     telefonoCliente: '',
     fecha,
+    tipoDias: 'Días Laborables',
     profileId: '',
     notasLines: [''],
   }

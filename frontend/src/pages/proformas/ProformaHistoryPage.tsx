@@ -116,8 +116,21 @@ export function ProformaHistoryPage() {
     try {
       await downloadExportFile(excelName)
       notify.success('Descarga iniciada', 'Excel descargado.')
-    } catch (error) {
-      notify.error('No se pudo descargar el Excel', getApiErrorMessage(error))
+    } catch {
+      try {
+        const result = await exportProformaExcel(proforma.idProforma)
+        const refreshed = await fetchProforma(proforma.idProforma)
+        setItems((current) =>
+          current.map((item) =>
+            item.idProforma === proforma.idProforma ? refreshed : item,
+          ),
+        )
+        const filename = result.excel?.filename ?? excelName
+        await downloadExportFile(filename)
+        notify.success('Descarga iniciada', 'Excel descargado.')
+      } catch (retryError) {
+        notify.error('No se pudo descargar el Excel', getApiErrorMessage(retryError))
+      }
     } finally {
       setActiveId(null)
     }
@@ -133,8 +146,21 @@ export function ProformaHistoryPage() {
     try {
       await downloadExportFile(pdfName)
       notify.success('Descarga iniciada', 'PDF descargado.')
-    } catch (error) {
-      notify.error('No se pudo descargar el PDF', getApiErrorMessage(error))
+    } catch {
+      try {
+        const result = await exportProformaPdf(proforma.idProforma)
+        const refreshed = await fetchProforma(proforma.idProforma)
+        setItems((current) =>
+          current.map((item) =>
+            item.idProforma === proforma.idProforma ? refreshed : item,
+          ),
+        )
+        const filename = result.pdf?.filename ?? pdfName
+        await downloadExportFile(filename)
+        notify.success('Descarga iniciada', 'PDF descargado.')
+      } catch (retryError) {
+        notify.error('No se pudo descargar el PDF', getApiErrorMessage(retryError))
+      }
     } finally {
       setActiveId(null)
     }

@@ -27,6 +27,10 @@ export class CreateProformaDto {
   fecha: string;
 
   @IsOptional()
+  @IsString()
+  tipoDias?: string;
+
+  @IsOptional()
   @IsEnum(ProformaStatus)
   status?: ProformaStatus;
 
