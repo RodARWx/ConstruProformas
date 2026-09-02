@@ -13,20 +13,30 @@ export const excelThinBorder: Partial<ExcelJS.Borders> = {
   right: thinSide,
 };
 
-export function fontBlack(size = BRAND_FONT_SIZE): Partial<ExcelJS.Font> {
+export function fontBlack(size = BRAND_FONT_SIZE, bold = true): Partial<ExcelJS.Font> {
   return {
     name: BRAND_FONTS.black,
     size,
-    bold: true,
+    bold,
     color: { argb: BRAND_COLORS_ARGB.charcoal },
   };
 }
 
-export function fontBook(size = BRAND_FONT_SIZE): Partial<ExcelJS.Font> {
+export function fontBook(size = BRAND_FONT_SIZE, bold = false): Partial<ExcelJS.Font> {
   return {
     name: BRAND_FONTS.book,
     size,
+    bold,
     color: { argb: BRAND_COLORS_ARGB.charcoal },
+  };
+}
+
+export function fontGothamBlack(size = BRAND_FONT_SIZE, bold = false, color = BRAND_COLORS_ARGB.charcoal): Partial<ExcelJS.Font> {
+  return {
+    name: BRAND_FONTS.black,
+    size,
+    bold,
+    color: { argb: color },
   };
 }
 
@@ -34,6 +44,7 @@ export function fontBookSecondary(size = BRAND_FONT_SIZE): Partial<ExcelJS.Font>
   return {
     name: BRAND_FONTS.book,
     size,
+    bold: false,
     color: { argb: BRAND_COLORS_ARGB.secondaryText },
   };
 }
@@ -75,7 +86,7 @@ export function totalRedFont(size = BRAND_FONT_SIZE): Partial<ExcelJS.Font> {
 
 export function fontBookRed(size = BRAND_FONT_SIZE): Partial<ExcelJS.Font> {
   return {
-    name: BRAND_FONTS.book,
+    name: BRAND_FONTS.black,
     size,
     bold: false,
     color: { argb: BRAND_COLORS_ARGB.primaryRed },

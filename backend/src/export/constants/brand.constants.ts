@@ -3,8 +3,8 @@ export const BRAND_COLORS = {
   primaryRed: '#FF0033',
   coral: '#D07761',
   burgundy: '#550012',
-  charcoal: '#444242',
-  secondaryText: '#777777',
+  charcoal: '#000000',
+  secondaryText: '#000000',
   categoryTint: '#FBECE8',
   softBorder: '#CCCCCC',
   white: '#FFFFFF',
@@ -15,17 +15,18 @@ export const BRAND_COLORS_ARGB = {
   primaryRed: 'FFFF0033',
   coral: 'FFD07761',
   burgundy: 'FF550012',
-  charcoal: 'FF444242',
-  secondaryText: 'FF777777',
+  charcoal: 'FF000000',
+  secondaryText: 'FF000000',
   categoryTint: 'FFFBECE8',
   softBorder: 'FFCCCCCC',
   white: 'FFFFFFFF',
 } as const;
 
-/** Tipografía institucional (pág. 14) */
+/** Tipografía institucional Gotham */
 export const BRAND_FONTS = {
+  primary: 'Gotham',
   black: 'Gotham Black',
-  book: 'Gotham Book',
+  book: 'Gotham',
   /** Fallback cuando las fuentes OTF no están instaladas */
   fallbackBlack: 'Arial Black',
   fallbackBook: 'Arial',
@@ -43,7 +44,7 @@ export const EXCEL_LAYOUT = {
   itemsStartRow: 14,
   /** Posición del QR WhatsApp alineado al borde derecho de la tabla (col G) */
   profileQr: {
-    colOffsetPx: 10,
+    colOffsetPx: 15,
     sizePx: 186,
     /** Filas de alto aproximado del QR para alinear el borde inferior con el contacto */
     heightInRows: 9.2,

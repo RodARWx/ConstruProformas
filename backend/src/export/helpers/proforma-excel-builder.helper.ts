@@ -1,7 +1,7 @@
 import * as ExcelJS from 'exceljs';
 import { Proforma } from '../../proformas/entities/proforma.entity';
 import { resolveProformaCustomerSnapshot } from '../../proformas/helpers/proforma-customer-snapshot.helper';
-import { EXCEL_SHEET_NAME, A4_PAGE_SETUP, BRAND_COLORS_ARGB, EXCEL_LAYOUT } from '../constants/brand.constants';
+import { EXCEL_SHEET_NAME, A4_PAGE_SETUP, BRAND_COLORS_ARGB, EXCEL_LAYOUT, BRAND_FONT_SIZE } from '../constants/brand.constants';
 import {
   CLIENT_META_LABELS,
   INSTITUTIONAL_COMPANY,
@@ -13,7 +13,9 @@ import {
   fillSolid,
   fontBlack,
   fontBook,
+  fontGothamBlack,
   headerTableFont,
+  totalRedFont,
 } from '../constants/excel-styles.constants';
 import { readLogoBuffer, resolveProformaExcelTemplatePath } from './asset-path.helper';
 import { formatCurrency, formatDate } from './filename.helper';
@@ -48,22 +50,60 @@ export async function buildProformaWorkbook(
     const sheet = workbook.worksheets[0];
 
     // Llenar metadatos en plantilla
-    sheet.getCell('B1').value = `OBJETO DE COMPRA: ${proforma.idProforma.toUpperCase()} PROFORMA ${proforma.nombreProyecto.toUpperCase()}`;
+    sheet.getCell('B1').value = `${proforma.idProforma.toUpperCase()} - ${proforma.nombreProyecto.toUpperCase()}`;
     sheet.getCell('C4').value = proforma.idProforma;
 
     const customer = resolveProformaCustomerSnapshot(proforma);
     sheet.getCell('C5').value = customer.nombreCliente;
     sheet.getCell('C6').value = customer.rucCedula;
     sheet.getCell('C7').value = customer.direccion ?? '';
+    sheet.getCell('A10').value = 'FECHA DE LA OFERTA:';
     sheet.getCell('C10').value = formatDate(proforma.fecha);
 
+    // Dirección (B3) y RUC (E3): Gotham y sin negrillas
+    const cellB3 = sheet.getCell('B3');
+    if (cellB3.value) {
+      cellB3.font = fontBook(cellB3.font?.size ?? 10, false);
+    }
+    const cellE3 = sheet.getCell('E3');
+    if (cellE3.value) {
+      cellE3.font = fontBook(cellE3.font?.size ?? 10, false);
+    }
+
+    // Celdas A4 a A10: Gotham Black sin negrillas, color negro
+    // Celdas C: C4 con negrilla (Gotham Black), C8 con negrilla en rojo (Gotham Black),
+    // de C5 a C10: Gotham sin negrillas
+    for (let r = 4; r <= 10; r++) {
+      const cellA = sheet.getCell(`A${r}`);
+      if (cellA.value) {
+        cellA.font = fontGothamBlack(cellA.font?.size ?? BRAND_FONT_SIZE, false);
+      }
+      const cellC = sheet.getCell(`C${r}`);
+      if (cellC.value) {
+        if (r === 4) {
+          cellC.font = fontGothamBlack(cellC.font?.size ?? BRAND_FONT_SIZE, true);
+        } else if (r === 8) {
+          cellC.font = totalRedFont(cellC.font?.size ?? BRAND_FONT_SIZE);
+        } else {
+          cellC.font = fontBook(cellC.font?.size ?? BRAND_FONT_SIZE, false);
+        }
+      }
+    }
+
     const layout = populateExcelTemplate(sheet, proforma);
+
+    // 1. Elimina por completo las imágenes que vienen pegadas en el archivo Excel (logo viejo y tarjeta turquesa)
+    (sheet as any)._media = [];
+    (workbook as any).media = [];
+
+    // 2. Inserta las imágenes limpias del código (logo nítido y el QR correspondiente al perfil)
     await embedImages(workbook, sheet, proforma, layout.contactEndRow);
 
     const endRow = Math.max(layout.contactEndRow ?? 31, 31);
     applyOuterContourBorder(sheet, 1, endRow, 1, 7, 'medium');
 
     return { workbook, layout };
+
   }
 
   const sheet = workbook.addWorksheet(EXCEL_SHEET_NAME, {
@@ -162,7 +202,6 @@ function buildTableHeader(sheet: ExcelJS.Worksheet): void {
 
   sheet.mergeCells(`A${row1}:A${row2}`);
   sheet.mergeCells(`B${row1}:B${row2}`);
-  sheet.mergeCells(`C${row1}:C${row2}`);
   sheet.mergeCells(`D${row1}:D${row2}`);
   sheet.mergeCells(`E${row1}:G${row1}`);
 
@@ -190,6 +229,11 @@ function buildTableHeader(sheet: ExcelJS.Worksheet): void {
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
   });
 
+  const cellDias = row12.getCell(3);
+  cellDias.value = 'DÍAS';
+  cellDias.font = headerTableFont();
+  cellDias.alignment = { horizontal: 'center', vertical: 'middle' };
+
   ['CANTIDAD', 'C. UNIT.', 'TOTAL'].forEach((text, index) => {
     const cell = row12.getCell(5 + index);
     cell.value = text;
@@ -198,8 +242,6 @@ function buildTableHeader(sheet: ExcelJS.Worksheet): void {
   });
 
 }
-
-
 
 async function embedImages(
   workbook: ExcelJS.Workbook,
@@ -216,7 +258,12 @@ async function embedImages(
         extension: 'png',
       });
       sheet.addImage(logoId, {
-        tl: { col: 5.123, row: 0.2 },
+        tl: {
+          nativeCol: 5,          // 5 = Columna F (donde arranca el logo)
+          nativeColOff: 300000,  // Desplazamiento fino a la derecha (cada 10,000 = 1 píxel)
+          nativeRow: 0,          // Fila 1
+          nativeRowOff: 70000,   // Un pequeño margen hacia abajo
+        } as any,
         ext: { width: 165, height: 52 },
       });
     }
@@ -232,27 +279,20 @@ async function embedImages(
         extension: 'png',
       });
 
-      const { profileQr } = EXCEL_LAYOUT;
-      const lastContactRow = contactEndRow - 1;
-      const qrTopRow = Math.max(0, lastContactRow + profileQr.bottomRowOffset - profileQr.heightInRows);
-      const topRowInt = Math.floor(qrTopRow);
-      const topRowFrac = qrTopRow - topRowInt;
-
-      const colOffUnit = Math.round(((profileQr as any).colOffsetPx ?? 90) * 10000);
-
       sheet.addImage(qrId, {
         tl: {
-          nativeCol: 5,
-          nativeColOff: colOffUnit,
-          nativeRow: topRowInt,
-          nativeRowOff: Math.round(topRowFrac * 180000),
+          nativeCol: 5,                  // 5 = Columna F (o 6 para Columna G)
+          nativeColOff: 500000,          // Mover a la DERECHA (cada 10,000 = 1 píxel)
+          nativeRow: contactEndRow - 8,  // Fila vertical (cambia a -6 para bajarlo o -8 para subirlo)
+          nativeRowOff: 0,               // Ajuste fino vertical en píxeles hacia abajo (ej: 50000 = 5px)
         } as any,
-        ext: { width: profileQr.sizePx, height: profileQr.sizePx },
+        ext: { width: 160, height: 160 }, // Tamaño cuadrado del QR (ancho x alto)
       });
     }
   } catch (err) {
     console.error('Error al incrustar el QR en Excel:', err);
   }
+
 
   try {
     sheet.getRow(contactEndRow + 1).height = 15.5;

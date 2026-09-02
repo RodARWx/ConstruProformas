@@ -14,6 +14,7 @@ import {
   fontBook,
   fontBookRed,
   fontBookSecondary,
+  fontGothamBlack,
   MONEY_FORMAT,
   QTY_FORMAT,
   totalRedFont,
@@ -45,7 +46,7 @@ export interface ProformaLayoutResult {
 export function buildDynamicItemRows(
   sheet: ExcelJS.Worksheet,
   detalles: ProformaDetail[],
-  startRow = 13,
+  startRow = 14,
 ): ProformaLayoutResult {
   const rubroRows: number[] = [];
   let currentRow = startRow;
@@ -135,13 +136,16 @@ export function buildTotalsBlock(
       ? `SUM(${rubroRows.map((r) => `G${r}`).join(',')})`
       : '0';
 
-  // TOTAL EN DÍAS
+  // TOTAL EN DÍAS (fila delgada, celda con borde visible)
+  sheet.getRow(row).height = 16;
   sheet.getCell(`B${row}`).value = TOTALS_LABELS.totalDias;
   sheet.getCell(`B${row}`).font = fontBook();
   sheet.getCell(`B${row}`).alignment = { horizontal: 'right', vertical: 'middle' };
-  sheet.getCell(`C${row}`).value = { formula: diasFormula };
-  sheet.getCell(`C${row}`).font = fontBook();
-  sheet.getCell(`C${row}`).alignment = { horizontal: 'center', vertical: 'middle' };
+  const cellDias = sheet.getCell(`C${row}`);
+  cellDias.value = { formula: diasFormula };
+  cellDias.font = fontBook();
+  cellDias.alignment = { horizontal: 'center', vertical: 'middle' };
+  cellDias.border = excelThinBorder;
   row += 1;
 
   // SUBTOTAL
@@ -280,7 +284,7 @@ export function populateExcelTemplate(
   proforma: Proforma,
 ): ProformaLayoutResult {
   const maxRow = sheet.rowCount;
-  for (let r = 13; r <= maxRow; r++) {
+  for (let r = 14; r <= maxRow; r++) {
     try {
       sheet.unMergeCells(`A${r}:G${r}`);
     } catch { }
@@ -288,7 +292,7 @@ export function populateExcelTemplate(
   }
 
   const rubroRows: number[] = [];
-  let currentRow = 13;
+  let currentRow = 14;
 
   proforma.detalles.forEach((linea) => {
     const row = sheet.getRow(currentRow);
@@ -317,7 +321,7 @@ export function populateExcelTemplate(
       for (let c = 1; c <= 7; c++) {
         const cell = row.getCell(c);
         cell.border = excelThinBorder;
-        cell.font = fontBook();
+        cell.font = fontBook(12, false);
         if (c === 5) cell.numFmt = QTY_FORMAT;
         if (c === 6 || c === 7) cell.numFmt = MONEY_FORMAT;
         cell.alignment = {
@@ -331,36 +335,39 @@ export function populateExcelTemplate(
       const maxCharsPerLine = 50;
       const lineas = Math.ceil(descripcion.length / maxCharsPerLine);
 
-      const maxRow = Math.max(15, lineas * 15);
+      const maxRowHeight = Math.max(15, lineas * 15);
 
-      row.height = maxRow;
+      row.height = maxRowHeight;
     }
     currentRow++;
   });
 
   const lastItemRow = currentRow - 1;
 
-  // TOTAL EN DÍAS (sin combinar A:F; etiqueta en B a la derecha, valor en C centrado)
+  // TOTAL EN DÍAS (fila delgada, celda con borde visible)
   const totalDiasRow = currentRow;
+  sheet.getRow(currentRow).height = 16;
   sheet.getCell(`B${currentRow}`).value = TOTALS_LABELS.totalDias;
-  sheet.getCell(`B${currentRow}`).font = fontBook();
+  sheet.getCell(`B${currentRow}`).font = fontGothamBlack(12, false);
   sheet.getCell(`B${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
-  sheet.getCell(`C${currentRow}`).value = {
+  const daysCell = sheet.getCell(`C${currentRow}`);
+  daysCell.value = {
     formula: rubroRows.length > 0 ? `SUM(${rubroRows.map((r) => `C${r}`).join(',')})` : '0',
   };
-  sheet.getCell(`C${currentRow}`).font = fontBook();
-  sheet.getCell(`C${currentRow}`).alignment = { horizontal: 'center', vertical: 'middle' };
+  daysCell.font = fontBook(12, false);
+  daysCell.alignment = { horizontal: 'center', vertical: 'middle' };
+  daysCell.border = excelThinBorder;
   currentRow++;
 
   const subtotalRow = currentRow;
   sheet.mergeCells(`A${currentRow}:F${currentRow}`);
   sheet.getCell(`A${currentRow}`).value = TOTALS_LABELS.subtotal;
-  sheet.getCell(`A${currentRow}`).font = fontBook();
+  sheet.getCell(`A${currentRow}`).font = fontGothamBlack(12, false);
   sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
   sheet.getCell(`G${currentRow}`).value = {
     formula: rubroRows.length > 0 ? `SUM(${rubroRows.map((r) => `G${r}`).join(',')})` : '0',
   };
-  sheet.getCell(`G${currentRow}`).font = fontBook();
+  sheet.getCell(`G${currentRow}`).font = fontGothamBlack(12, false);
   sheet.getCell(`G${currentRow}`).numFmt = MONEY_FORMAT;
   sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
   currentRow++;
@@ -370,10 +377,10 @@ export function populateExcelTemplate(
     ivaRow = currentRow;
     sheet.mergeCells(`A${currentRow}:F${currentRow}`);
     sheet.getCell(`A${currentRow}`).value = TOTALS_LABELS.iva;
-    sheet.getCell(`A${currentRow}`).font = fontBook();
+    sheet.getCell(`A${currentRow}`).font = fontGothamBlack(12, false);
     sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
     sheet.getCell(`G${currentRow}`).value = { formula: `0.15*G${subtotalRow}` };
-    sheet.getCell(`G${currentRow}`).font = fontBook();
+    sheet.getCell(`G${currentRow}`).font = fontGothamBlack(12, false);
     sheet.getCell(`G${currentRow}`).numFmt = MONEY_FORMAT;
     sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
     currentRow++;
@@ -382,12 +389,12 @@ export function populateExcelTemplate(
   const totalRow = currentRow;
   sheet.mergeCells(`A${currentRow}:F${currentRow}`);
   sheet.getCell(`A${currentRow}`).value = TOTALS_LABELS.total;
-  sheet.getCell(`A${currentRow}`).font = fontBookRed();
+  sheet.getCell(`A${currentRow}`).font = fontBookRed(12);
   sheet.getCell(`A${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
   sheet.getCell(`G${currentRow}`).value = {
     formula: ivaRow ? `G${subtotalRow}+G${ivaRow}` : `G${subtotalRow}`,
   };
-  sheet.getCell(`G${currentRow}`).font = fontBookRed();
+  sheet.getCell(`G${currentRow}`).font = fontBookRed(12);
   sheet.getCell(`G${currentRow}`).numFmt = MONEY_FORMAT;
   sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
@@ -399,7 +406,7 @@ export function populateExcelTemplate(
 
   sheet.mergeCells(`A${currentRow}:G${currentRow}`);
   sheet.getCell(`A${currentRow}`).value = 'NOTAS:';
-  sheet.getCell(`A${currentRow}`).font = fontBlack();
+  sheet.getCell(`A${currentRow}`).font = fontGothamBlack(12, false);
   currentRow++;
 
   const notes = buildUserNotesForExport(proforma.notas);
@@ -418,7 +425,7 @@ export function populateExcelTemplate(
 
   sheet.mergeCells(`A${currentRow}:G${currentRow}`);
   sheet.getCell(`A${currentRow}`).value = 'Contacto:';
-  sheet.getCell(`A${currentRow}`).font = fontBlack();
+  sheet.getCell(`A${currentRow}`).font = fontBlack(12, true);
   currentRow++;
 
   const { profile } = proforma;
@@ -433,12 +440,12 @@ export function populateExcelTemplate(
   lines.forEach((line) => {
     sheet.mergeCells(`A${currentRow}:G${currentRow}`);
     sheet.getCell(`A${currentRow}`).value = line;
-    sheet.getCell(`A${currentRow}`).font = fontBook();
+    sheet.getCell(`A${currentRow}`).font = fontBook(12, false);
     currentRow++;
   });
 
   return {
-    firstItemRow: 13,
+    firstItemRow: 14,
     lastItemRow,
     rubroRows,
     totalsStartRow: totalDiasRow,

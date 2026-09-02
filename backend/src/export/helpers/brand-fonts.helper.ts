@@ -46,6 +46,18 @@ export function buildEmbeddedFontCss(): string {
   if (black) {
     blocks.push(`
 @font-face {
+  font-family: 'Gotham';
+  src: url(data:font/opentype;base64,${black}) format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Gotham';
+  src: url(data:font/opentype;base64,${black}) format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+@font-face {
   font-family: 'Gotham Black';
   src: url(data:font/opentype;base64,${black}) format('opentype');
   font-weight: 900;
@@ -55,6 +67,12 @@ export function buildEmbeddedFontCss(): string {
 
   if (book) {
     blocks.push(`
+@font-face {
+  font-family: 'Gotham';
+  src: url(data:font/opentype;base64,${book}) format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
 @font-face {
   font-family: 'Gotham Book';
   src: url(data:font/opentype;base64,${book}) format('opentype');

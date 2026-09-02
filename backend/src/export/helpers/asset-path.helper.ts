@@ -136,10 +136,10 @@ export function resolveProformaExcelTemplatePath(): string | null {
 
   const root = getBackendRoot();
   const candidates = [
+    join(root, '..', 'Plantilla generación de proformas.xlsx'),
+    join(process.cwd(), 'Plantilla generación de proformas.xlsx'),
     join(root, 'templates', 'plantilla-proforma.xlsx'),
     join(process.cwd(), 'templates', 'plantilla-proforma.xlsx'),
-    join(process.cwd(), 'Plantilla generación de proformas.xlsx'),
-    join(root, '..', 'Plantilla generación de proformas.xlsx'),
   ];
 
   for (const candidate of candidates) {
