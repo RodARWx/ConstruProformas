@@ -105,9 +105,11 @@ export function renderProformaHtml(
 
     .header-center {
       flex: 1;
-      font-weight: lighter;
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: normal;
       text-align: center;
-      font-size: 14px;
+      font-size: 13px;
+      color: #000000;
     }
 
     .header-right {
@@ -127,7 +129,10 @@ export function renderProformaHtml(
     .section-razon-social {
       text-align: center;
       padding: 4px 14px;
+      font-family: 'Gotham Black', sans-serif;
       font-weight: bold;
+      color: #000000;
+      font-size: 12px;
     }
 
     .section-razon-social p {
@@ -156,6 +161,12 @@ export function renderProformaHtml(
       text-align: right;
     }
 
+    .empresa-val {
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
+    }
+
     /* ============================================
        SECCIÓN 4: INFORMACIÓN DEL CLIENTE
        ============================================ */
@@ -170,13 +181,28 @@ export function renderProformaHtml(
       line-height: 1.55;
     }
 
-    .cliente-row .label-bold {
+    .cliente-row .cliente-label {
       flex-shrink: 0;
-      min-width: 165px;
+      min-width: 175px;
     }
 
-    .cliente-value {
+    .cliente-val {
       margin-left: 20px;
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
+    }
+
+    .value-proforma-id {
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: bold;
+      color: #000000;
+    }
+
+    .value-monto-contrato {
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: bold;
+      color: #FF0033;
     }
 
     /* ============================================
@@ -192,7 +218,6 @@ export function renderProformaHtml(
       table-layout: fixed;
     }
 
-    /* Anchos de columnas */
     .col-codigo      { width: 9%; }
     .col-descripcion { width: 30%; }
     .col-tiempo      { width: 10%; }
@@ -201,10 +226,10 @@ export function renderProformaHtml(
     .col-cunit       { width: 9%; }
     .col-total       { width: 9%; }
 
-    /* Cabecera */
     .rubros-table thead th {
       background-color: #550012;
       color: #ffffff;
+      font-family: 'Gotham Black', sans-serif;
       font-weight: bold;
       text-align: center;
       padding: 2px 3px;
@@ -220,11 +245,13 @@ export function renderProformaHtml(
       border-right: none;
     }
 
-    /* Celdas del cuerpo */
     .rubros-table tbody td {
       padding: 3px 5px;
       border: 1px solid #000000;
       vertical-align: middle;
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
     }
 
     .rubros-table tbody td:first-child {
@@ -234,35 +261,42 @@ export function renderProformaHtml(
       border-right: none;
     }
 
-    /* Fila TOTAL DÍAS */
+    /* Filas de categoría */
+    .rubros-table tbody tr.row-category td,
+    .rubros-table tr.row-category td,
+    .row-category td {
+      background-color: #fbece8 !important;
+      font-family: 'Gotham Black', sans-serif !important;
+      font-weight: bold !important;
+      color: #550012 !important;
+      padding: 3px 6px;
+      border-left: none;
+      border-right: none;
+    }
+
+    /* Fila TOTAL EN DÍAS */
     .rubros-table .row-total-dias td {
       border: none;
     }
 
     .rubros-table .row-total-dias .cell-total-dias {
       border: 1px solid #000000;
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
     }
 
-    /* Filas de categoría */
-    .row-category td {
-      background-color: #fbece8;
-      font-weight: bold;
-      color: #550012;
-      padding: 3px 6px;
-      border-left: none;
-      border-right: none;
-    }
-
-    .text-right-bold {
+    .rubros-table .row-total-dias .text-right-total-dias,
+    .text-right-total-dias {
       text-align: right;
-      font-weight: bold;
+      font-family: 'Gotham Black', sans-serif !important;
+      font-weight: normal !important;
+      color: #000000 !important;
     }
 
-    /* Alineaciones de celdas */
     .cell-center { text-align: center; }
     .cell-right  { text-align: right; }
 
-    /* ---- Totales (Subtotal, IVA, Total) ---- */
     .totales-container {
       display: flex;
       flex-direction: column;
@@ -273,7 +307,9 @@ export function renderProformaHtml(
     .total-row {
       display: flex;
       justify-content: flex-end;
-      font-weight: bold;
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: normal;
+      color: #000000;
       line-height: 1.5;
     }
 
@@ -289,7 +325,7 @@ export function renderProformaHtml(
     }
 
     .total-final {
-      color: #ff0000;
+      color: #FF0033;
     }
 
     /* ============================================
@@ -301,7 +337,9 @@ export function renderProformaHtml(
     }
 
     .section-notas .notas-title {
-      font-weight: bold;
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: normal;
+      color: #000000;
       margin: 0 0 1px 0;
     }
 
@@ -309,6 +347,9 @@ export function renderProformaHtml(
       margin: 0.5px 0;
       font-size: 10px;
       line-height: 1.3;
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
     }
 
     /* ============================================
@@ -331,20 +372,21 @@ export function renderProformaHtml(
       align-items: flex-start;
     }
 
-    .contacto-label {
+    .contacto-title {
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: bold;
+      color: #000000;
       flex-shrink: 0;
       margin-right: 14px;
       padding-top: 0;
     }
 
     .contacto-info p {
+      font-family: 'Gotham', sans-serif;
+      font-weight: normal;
+      color: #000000;
       margin: 0;
       line-height: 1.55;
-    }
-
-    .contacto-cargo {
-      font-weight: bold;
-      letter-spacing: 0.3px;
     }
 
     .footer-right {
@@ -361,12 +403,14 @@ export function renderProformaHtml(
     /* ============================================
        UTILIDADES
        ============================================ */
-    .label-bold {
-      font-weight: bold;
+    .label-gotham-black {
+      font-family: 'Gotham Black', sans-serif;
+      font-weight: normal;
+      color: #000000;
     }
 
     .text-red {
-      color: #ff0000;
+      color: #FF0033;
     }
   </style>
 </head>
@@ -377,10 +421,10 @@ export function renderProformaHtml(
     <!-- SECCIÓN 1: ENCABEZADO / OBJETO DE COMPRA -->
     <section class="section-header">
       <div class="header-left">
-        <span class="label-bold">OBJETO DE COMPRA:</span>
+        <span class="label-gotham-black">OBJETO DE COMPRA:</span>
       </div>
       <div class="header-center">
-        ${escapeHtml(proforma.idProforma.toUpperCase())} PROFORMA ${escapeHtml(proforma.nombreProyecto.toUpperCase())}
+        ${escapeHtml(proforma.idProforma.toUpperCase())} - ${escapeHtml(proforma.nombreProyecto.toUpperCase())}
       </div>
       <div class="header-right">
         ${logoDataUrl ? `<img src="${logoDataUrl}" alt="CONSTRUMÉTRICA" class="logo">` : ''}
@@ -396,12 +440,12 @@ export function renderProformaHtml(
     <section class="section-empresa">
       <div class="empresa-row">
         <div class="empresa-col-left">
-          <span class="label-bold">DIRECCIÓN:</span>
-          <span>${escapeHtml(INSTITUTIONAL_COMPANY.direccion)}</span>
+          <span class="label-gotham-black">DIRECCIÓN:</span>
+          <span class="empresa-val">${escapeHtml(INSTITUTIONAL_COMPANY.direccion)}</span>
         </div>
         <div class="empresa-col-right">
-          <span class="label-bold">RUC:</span>
-          <span>${escapeHtml(INSTITUTIONAL_COMPANY.ruc)}</span>
+          <span class="label-gotham-black">RUC:</span>
+          <span class="empresa-val">${escapeHtml(INSTITUTIONAL_COMPANY.ruc)}</span>
         </div>
       </div>
     </section>
@@ -409,32 +453,32 @@ export function renderProformaHtml(
     <!-- SECCIÓN 4: INFORMACIÓN DEL CLIENTE -->
     <section class="section-cliente">
       <div class="cliente-row">
-        <span class="label-bold">PROFORMA N°:</span>
-        <span class="cliente-value">${escapeHtml(proforma.idProforma)}</span>
+        <span class="label-gotham-black cliente-label">PROFORMA N°:</span>
+        <span class="cliente-val value-proforma-id">${escapeHtml(proforma.idProforma)}</span>
       </div>
       <div class="cliente-row">
-        <span class="label-bold">CLIENTE:</span>
-        <span class="cliente-value">${escapeHtml(customer.nombreCliente)}</span>
+        <span class="label-gotham-black cliente-label">CLIENTE:</span>
+        <span class="cliente-val">${escapeHtml(customer.nombreCliente)}</span>
       </div>
       <div class="cliente-row">
-        <span class="label-bold">RUC/CÉDULA:</span>
-        <span class="cliente-value">${escapeHtml(customer.rucCedula)}</span>
+        <span class="label-gotham-black cliente-label">RUC/CÉDULA:</span>
+        <span class="cliente-val">${escapeHtml(customer.rucCedula)}</span>
       </div>
       ${customer.direccion ? `<div class="cliente-row">
-        <span class="label-bold">DIRECCIÓN:</span>
-        <span class="cliente-value">${escapeHtml(customer.direccion)}</span>
+        <span class="label-gotham-black cliente-label">DIRECCIÓN:</span>
+        <span class="cliente-val">${escapeHtml(customer.direccion)}</span>
       </div>` : ''}
       <div class="cliente-row">
-        <span class="label-bold">MONTO DEL CONTRATO:</span>
-        <span class="cliente-value text-red">${formatCurrency(proforma.montoContrato)}</span>
+        <span class="label-gotham-black cliente-label">MONTO DEL CONTRATO:</span>
+        <span class="cliente-val value-monto-contrato text-red">${formatCurrency(proforma.montoContrato)}</span>
       </div>
       <div class="cliente-row">
-        <span class="label-bold">TIEMPO DE ENTREGA:</span>
-        <span class="cliente-value">${escapeHtml(proforma.tiempoEjecucion ?? '0')} ${escapeHtml(proforma.tipoDias ?? 'Días Laborables')}</span>
+        <span class="label-gotham-black cliente-label">TIEMPO DE ENTREGA:</span>
+        <span class="cliente-val">${escapeHtml(proforma.tiempoEjecucion ?? '0')} ${escapeHtml(proforma.tipoDias ?? 'Días Laborables')}</span>
       </div>
       <div class="cliente-row">
-        <span class="label-bold">FECHA:</span>
-        <span class="cliente-value">${escapeHtml(formatDate(proforma.fecha))}</span>
+        <span class="label-gotham-black cliente-label">FECHA DE LA OFERTA:</span>
+        <span class="cliente-val">${escapeHtml(formatDate(proforma.fecha))}</span>
       </div>
     </section>
 
@@ -459,10 +503,10 @@ export function renderProformaHtml(
         <tbody>
           ${itemRows}
 
-          <!-- Fila TOTAL DÍAS -->
+          <!-- Fila TOTAL EN DÍAS -->
           <tr class="row-total-dias">
             <td></td>
-            <td class="text-right-bold">TOTAL DÍAS</td>
+            <td class="text-right-total-dias">TOTAL EN DÍAS</td>
             <td class="cell-center cell-total-dias">${escapeHtml(proforma.tiempoEjecucion ?? '0')}</td>
             <td></td>
             <td></td>
@@ -499,12 +543,13 @@ export function renderProformaHtml(
     <footer class="section-footer">
       <div class="footer-left">
         <div class="contacto-row">
-          <span class="label-bold contacto-label">Contacto:</span>
+          <span class="contacto-title">Contacto:</span>
           <div class="contacto-info">
             <p>${escapeHtml(profile.nombre)}</p>
-            <p class="contacto-cargo">${escapeHtml(profile.cargo)}</p>
-            ${profile.telefono ? `<p>Teléf.: ${escapeHtml(profile.telefono)}</p>` : ''}
-            ${profile.correo ? `<p>Correo: ${escapeHtml(profile.correo)}</p>` : ''}
+            <p>${escapeHtml(profile.cargo)}</p>
+            ${profile.registroSenescyt ? `<p>Registro SENESCYT: ${escapeHtml(profile.registroSenescyt)}</p>` : ''}
+            ${profile.telefono ? `<p>Tel: ${escapeHtml(profile.telefono)}</p>` : ''}
+            ${profile.correo ? `<p>${escapeHtml(profile.correo)}</p>` : ''}
           </div>
         </div>
       </div>

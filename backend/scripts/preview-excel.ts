@@ -3,6 +3,7 @@ import { join } from 'path';
 import { buildProformaWorkbook } from '../src/export/helpers/proforma-excel-builder.helper';
 import { ProformaStatus } from '../src/proformas/enums/proforma-status.enum';
 import { Proforma } from '../src/proformas/entities/proforma.entity';
+import { ProformaHtmlPdfService } from '../src/export/services/proforma-html-pdf.service';
 
 async function main() {
   const exportsDir = join(process.cwd(), 'data', 'exports');
@@ -103,6 +104,16 @@ async function main() {
   }
 
   console.log(`✅ ¡Vista previa generada con éxito en: ${outputPath}`);
+
+  console.log('Generando vista previa PDF...');
+  try {
+    const pdfService = new ProformaHtmlPdfService();
+    const pdfPath = join(process.cwd(), 'preview.pdf');
+    await pdfService.renderToPdf(proforma, pdfPath);
+    console.log(`✅ ¡Vista previa PDF generada con éxito en: ${pdfPath}`);
+  } catch (err) {
+    console.warn('⚠️ No se pudo generar PDF preview:', err);
+  }
 }
 
 main().catch((err) => {

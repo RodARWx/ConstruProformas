@@ -60,6 +60,18 @@ export function buildEmbeddedFontCss(): string {
 @font-face {
   font-family: 'Gotham Black';
   src: url(data:font/opentype;base64,${black}) format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Gotham Black';
+  src: url(data:font/opentype;base64,${black}) format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+@font-face {
+  font-family: 'Gotham Black';
+  src: url(data:font/opentype;base64,${black}) format('opentype');
   font-weight: 900;
   font-style: normal;
 }`);
