@@ -4,7 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { getDatabaseConfig } from './config/database.config';
 import { AppController } from './app.controller';
-import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { AuthModule } from './auth/auth.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { ProfilesModule } from './profiles/profiles.module';
 import { CustomersModule } from './customers/customers.module';
 import { CatalogModule } from './catalog/catalog.module';
@@ -23,6 +24,7 @@ import { HealthModule } from './health/health.module';
     TypeOrmModule.forRootAsync({
       useFactory: getDatabaseConfig,
     }),
+    AuthModule,
     DatabaseModule,
     HealthModule,
     ProfilesModule,
@@ -35,8 +37,10 @@ import { HealthModule } from './health/health.module';
   controllers: [AppController],
   providers: [
     {
+      // JwtAuthGuard reemplaza ApiKeyGuard como guard global.
+      // Protege toda la API con Bearer JWT; @Public() marca rutas abiertas (health, login).
       provide: APP_GUARD,
-      useClass: ApiKeyGuard,
+      useClass: JwtAuthGuard,
     },
   ],
 })

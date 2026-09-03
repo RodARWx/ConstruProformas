@@ -6,37 +6,35 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { readAccessSession, writeAccessSession } from '../lib/access'
+import { clearToken, getStoredToken, storeToken } from '../lib/api'
 import type { UserRole } from '../types/app'
 
 interface AppContextValue {
-  /** Indica si el usuario superó la barrera de PIN del cliente. */
+  /** Indica si hay un JWT válido en sesión. */
   isAccessGranted: boolean
-  grantAccess: () => void
+  /** Almacena el JWT y marca sesión como activa. */
+  grantAccess: (token: string) => void
+  /** Elimina el JWT y cierra sesión. */
   revokeAccess: () => void
-  /**
-   * Rol activo en la UI.
-   * TODO: conectar a autenticación real del backend cuando exista login/JWT y roles.
-   * Por ahora siempre es 'emisor'; 'admin' quedará disponible cuando el servidor lo exponga.
-   */
   role: UserRole
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [isAccessGranted, setIsAccessGranted] = useState(readAccessSession)
+  const [isAccessGranted, setIsAccessGranted] = useState(
+    () => !!getStoredToken(),
+  )
 
-  // TODO: reemplazar por el rol devuelto por el backend cuando haya autenticación de usuarios.
   const role: UserRole = 'emisor'
 
-  const grantAccess = useCallback(() => {
-    writeAccessSession(true)
+  const grantAccess = useCallback((token: string) => {
+    storeToken(token)
     setIsAccessGranted(true)
   }, [])
 
   const revokeAccess = useCallback(() => {
-    writeAccessSession(false)
+    clearToken()
     setIsAccessGranted(false)
   }, [])
 

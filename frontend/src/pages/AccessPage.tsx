@@ -3,23 +3,22 @@ import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { BrandLogo } from '../components/layout/BrandLogo'
 import { Button, Card, Input } from '../components/ui'
 import { useApp } from '../context/AppContext'
-import {
-  isAccessPinConfigured,
-  validateAccessPin,
-} from '../lib/access'
+import { getApiErrorMessage } from '../lib/api'
+import { loginWithPin } from '../lib/auth'
 import { notify } from '../lib/toast'
 
 /**
- * Pantalla de acceso con PIN del lado del cliente.
- * No reemplaza autenticación real del backend (solo API key de servidor).
+ * Pantalla de acceso con PIN validado en el backend.
+ * El backend devuelve un JWT que se almacena en sessionStorage
+ * y se envía en cada petición subsiguiente como Authorization: Bearer.
  */
 export function AccessPage() {
   const { isAccessGranted, grantAccess } = useApp()
   const navigate = useNavigate()
   const location = useLocation()
   const [pin, setPin] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | undefined>()
-  const pinConfigured = isAccessPinConfigured()
 
   const from =
     (location.state as { from?: { pathname: string } } | null)?.from
@@ -29,25 +28,28 @@ export function AccessPage() {
     return <Navigate to={from} replace />
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(undefined)
 
-    if (!pinConfigured) {
-      setError('PIN de acceso no configurado (VITE_ACCESS_PIN)')
-      notify.error('Configuración incompleta', 'Defina VITE_ACCESS_PIN en el entorno')
+    if (!pin.trim()) {
+      setError('Ingrese el PIN de acceso')
       return
     }
 
-    if (!validateAccessPin(pin)) {
-      setError('PIN incorrecto')
-      notify.error('Acceso denegado', 'Verifique la clave e intente de nuevo')
-      return
+    setIsLoading(true)
+    try {
+      const { access_token } = await loginWithPin(pin.trim())
+      grantAccess(access_token)
+      notify.success('Acceso concedido')
+      navigate(from, { replace: true })
+    } catch (err) {
+      const msg = getApiErrorMessage(err)
+      setError(msg)
+      notify.error('Acceso denegado', msg)
+    } finally {
+      setIsLoading(false)
     }
-
-    grantAccess()
-    notify.success('Acceso concedido')
-    navigate(from, { replace: true })
   }
 
   return (
@@ -63,18 +65,10 @@ export function AccessPage() {
         <Card>
           <h1 className="font-heading text-xl uppercase text-brand-wine">Acceso</h1>
           <p className="mt-2 text-sm text-brand-gray/80">
-            Ingrese el PIN de acceso para usar la aplicación. Esta barrera es solo
-            del lado del cliente y no sustituye un login de usuarios en el servidor.
+            Ingrese el PIN de acceso para usar la aplicación.
           </p>
 
-          {!pinConfigured && (
-            <p className="mt-4 rounded-md border border-brand-red/30 bg-brand-red/5 px-3 py-2 text-sm text-brand-red">
-              Configure la variable <code>VITE_ACCESS_PIN</code> en su archivo{' '}
-              <code>.env</code> para habilitar el acceso.
-            </p>
-          )}
-
-          <form className="mt-6 space-y-5" onSubmit={handleSubmit} noValidate>
+          <form className="mt-6 space-y-5" onSubmit={(e) => void handleSubmit(e)} noValidate>
             <Input
               label="PIN de acceso"
               type="password"
@@ -85,16 +79,16 @@ export function AccessPage() {
               onChange={(event) => setPin(event.target.value)}
               error={error}
               required
-              disabled={!pinConfigured}
+              disabled={isLoading}
             />
 
             <Button
               type="submit"
               variant="primary"
               fullWidth
-              disabled={!pinConfigured}
+              disabled={isLoading}
             >
-              Ingresar
+              {isLoading ? 'Verificando…' : 'Ingresar'}
             </Button>
           </form>
         </Card>

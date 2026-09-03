@@ -1,19 +1,54 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
-import { getApiBaseUrl, getApiKey, isLikelyMisconfiguredApiUrl } from './runtimeEnv'
+import { getApiBaseUrl, isLikelyMisconfiguredApiUrl } from './runtimeEnv'
 
 const API_BASE_URL = getApiBaseUrl()
-const API_KEY = getApiKey()
+
+/** Token de sesión almacenado en sessionStorage. */
+const TOKEN_KEY = 'construproformas_jwt'
+
+export function getStoredToken(): string | null {
+  return sessionStorage.getItem(TOKEN_KEY)
+}
+
+export function storeToken(token: string): void {
+  sessionStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearToken(): void {
+  sessionStorage.removeItem(TOKEN_KEY)
+}
 
 /** Cliente HTTP centralizado para la API de Construproformas. */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-    ...(API_KEY ? { 'X-API-KEY': API_KEY } : {}),
   },
 })
 
-/** Garantiza que la respuesta del backend sea un arreglo (evita pantalla en blanco si la URL apunta al sitio estático). */
+// ── Interceptor de request: adjuntar token JWT si existe ──
+apiClient.interceptors.request.use((config) => {
+  const token = getStoredToken()
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`
+  }
+  return config
+})
+
+// ── Interceptor de response: redirigir al login si el token expiró / es inválido ──
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      clearToken()
+      // Redirigir a la pantalla de acceso sin romper React Router
+      window.location.href = '/acceso'
+    }
+    return Promise.reject(error)
+  },
+)
+
+/** Garantiza que la respuesta del backend sea un arreglo. */
 export function ensureArray<T>(data: unknown, resourceLabel: string): T[] {
   if (Array.isArray(data)) {
     return data as T[]
@@ -41,8 +76,7 @@ export async function apiDownloadFile(path: string, filename: string): Promise<v
 
 /**
  * Descarga el archivo como blob (con autenticación) y lo abre en una nueva pestaña.
- * Para PDFs el navegador lo muestra con su visor nativo (zoom, imprimir, descargar).
- * Necesario porque window.open() no envía cabeceras X-API-KEY.
+ * Para PDFs el navegador lo muestra con su visor nativo.
  */
 export async function apiOpenFileInline(path: string): Promise<void> {
   const response = await apiClient.get(path, { responseType: 'blob' })
@@ -50,7 +84,6 @@ export async function apiOpenFileInline(path: string): Promise<void> {
   const objectUrl = URL.createObjectURL(blob)
   const tab = window.open(objectUrl, '_blank', 'noopener,noreferrer')
   if (!tab) {
-    // Fallback: si el popup blocker lo impidió, forzar descarga
     const anchor = document.createElement('a')
     anchor.href = objectUrl
     anchor.target = '_blank'
@@ -59,7 +92,6 @@ export async function apiOpenFileInline(path: string): Promise<void> {
     anchor.click()
     anchor.remove()
   }
-  // Liberar el objectUrl después de un momento (el navegador ya lo leyó)
   setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
 }
 
@@ -121,7 +153,7 @@ export function getApiErrorMessage(error: unknown): string {
       }
       return (
         `No se puede conectar con el backend (${API_BASE_URL}). ` +
-        'Verifique que el servicio API esté activo, CORS_ORIGIN incluya esta app y VITE_API_KEY coincida con API_KEY.'
+        'Verifique que el servicio API esté activo, CORS_ORIGIN incluya esta app y el token sea válido.'
       )
     }
     if (error.message) {
