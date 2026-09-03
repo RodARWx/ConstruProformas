@@ -1,11 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { existsSync } from 'fs';
 import { join } from 'path';
 import { Proforma } from '../../proformas/entities/proforma.entity';
 import { ExportedFileInfo } from '../dto/export-result.dto';
 import { buildExportFilename } from '../helpers/filename.helper';
-import { convertXlsxToPdf } from '../helpers/libreoffice.helper';
-import { getExportsDirectory } from '../helpers/storage-path.helper';
+import {
+  ensureProformaFolder,
+  resolveVersionedFilename,
+} from '../helpers/storage-path.helper';
 import { ProformaExcelExportService } from './proforma-excel-export.service';
 import { ProformaHtmlPdfService } from './proforma-html-pdf.service';
 
@@ -19,28 +20,35 @@ export class ProformaPdfExportService {
   ) {}
 
   /**
-   * Genera PDF a partir del Excel exportado.
-   * HTML + Puppeteer (con categorías del catálogo)
+   * Genera PDF y lo guarda en la carpeta estructurada de la proforma en el NAS.
+   * Aplica versionado automático si el archivo base ya existe.
    */
   async exportFromXlsx(
     proforma: Proforma,
-    xlsxAbsolutePath: string,
+    _xlsxAbsolutePath: string,
   ): Promise<ExportedFileInfo> {
-    const filename = buildExportFilename(
+    const folderPath = ensureProformaFolder(
+      proforma.idProforma,
+      proforma.nombreProyecto,
+    );
+
+    const baseFilename = buildExportFilename(
       proforma.idProforma,
       proforma.nombreProyecto,
       'pdf',
     );
-    const absolutePath = join(getExportsDirectory(), filename);
 
-    this.logger.log(`Generando PDF vía Puppeteer (HTML) para ${proforma.idProforma}`);
+    const filename = resolveVersionedFilename(folderPath, baseFilename);
+    const absolutePath = join(folderPath, filename);
+
+    this.logger.log(`Generando PDF vía Puppeteer para ${proforma.idProforma} → ${filename}`);
     const prepared = await this.excelExportService.prepareForExport(proforma);
     await this.htmlPdfService.renderToPdf(prepared, absolutePath);
 
     return {
       filename,
       absolutePath,
-      relativePath: join('exports', filename),
+      folderPath,
       mimeType: 'application/pdf',
     };
   }

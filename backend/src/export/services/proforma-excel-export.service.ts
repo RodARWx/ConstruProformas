@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { existsSync } from 'fs';
 import { join } from 'path';
 import { CatalogService } from '../../catalog/catalog.service';
 import { Proforma } from '../../proformas/entities/proforma.entity';
@@ -9,7 +10,10 @@ import {
   buildCodigoCategoriaMap,
   prepareProformaForExport,
 } from '../helpers/proforma-export-details.helper';
-import { getExportsDirectory } from '../helpers/storage-path.helper';
+import {
+  ensureProformaFolder,
+  resolveVersionedFilename,
+} from '../helpers/storage-path.helper';
 
 @Injectable()
 export class ProformaExcelExportService {
@@ -23,16 +27,28 @@ export class ProformaExcelExportService {
   }
 
   /**
-   * Genera el .xlsx institucional desde cero con ExcelJS.
+   * Genera el .xlsx institucional y lo guarda en la carpeta de la proforma en el NAS.
+   *
+   * Versionado inteligente: si el archivo ya existe se crea _V2.xlsx, _V3.xlsx, etc.
+   * Si la proforma no ha cambiado y el archivo ya existe, el caller puede optar por
+   * no invocar este método y servir el archivo existente directamente.
    */
   async export(proforma: Proforma): Promise<ExportedFileInfo> {
     const prepared = await this.prepareForExport(proforma);
-    const filename = buildExportFilename(
+
+    const folderPath = ensureProformaFolder(
+      prepared.idProforma,
+      prepared.nombreProyecto,
+    );
+
+    const baseFilename = buildExportFilename(
       prepared.idProforma,
       prepared.nombreProyecto,
       'xlsx',
     );
-    const absolutePath = join(getExportsDirectory(), filename);
+
+    const filename = resolveVersionedFilename(folderPath, baseFilename);
+    const absolutePath = join(folderPath, filename);
 
     const { workbook } = await buildProformaWorkbook(prepared);
     await workbook.xlsx.writeFile(absolutePath);
@@ -40,18 +56,36 @@ export class ProformaExcelExportService {
     return {
       filename,
       absolutePath,
-      relativePath: join('exports', filename),
+      folderPath,
       mimeType:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     };
   }
 
+  /**
+   * Devuelve la ruta donde estaría el Excel base (sin versión) de esta proforma.
+   * Útil para comprobar si ya existe un archivo antes de volver a generarlo.
+   */
   getExpectedXlsxPath(proforma: Proforma): string {
+    const { buildProformaFolderPath } = require('../helpers/storage-path.helper');
+    const folderPath = buildProformaFolderPath(
+      proforma.idProforma,
+      proforma.nombreProyecto,
+    );
     const filename = buildExportFilename(
       proforma.idProforma,
       proforma.nombreProyecto,
       'xlsx',
     );
-    return join(getExportsDirectory(), filename);
+    return join(folderPath, filename);
+  }
+
+  /**
+   * Retorna la ruta del Excel base solo si ya existe en disco (no genera nada).
+   * Usado por el servicio de exportación para no re-generar si no hubo cambios.
+   */
+  findExistingXlsx(proforma: Proforma): string | null {
+    const path = this.getExpectedXlsxPath(proforma);
+    return existsSync(path) ? path : null;
   }
 }
