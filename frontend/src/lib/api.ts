@@ -39,6 +39,31 @@ export async function apiDownloadFile(path: string, filename: string): Promise<v
   URL.revokeObjectURL(objectUrl)
 }
 
+/**
+ * Descarga el archivo como blob (con autenticación) y lo abre en una nueva pestaña.
+ * Para PDFs el navegador lo muestra con su visor nativo (zoom, imprimir, descargar).
+ * Necesario porque window.open() no envía cabeceras X-API-KEY.
+ */
+export async function apiOpenFileInline(path: string): Promise<void> {
+  const response = await apiClient.get(path, { responseType: 'blob' })
+  const blob = response.data as Blob
+  const objectUrl = URL.createObjectURL(blob)
+  const tab = window.open(objectUrl, '_blank', 'noopener,noreferrer')
+  if (!tab) {
+    // Fallback: si el popup blocker lo impidió, forzar descarga
+    const anchor = document.createElement('a')
+    anchor.href = objectUrl
+    anchor.target = '_blank'
+    anchor.rel = 'noopener'
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+  }
+  // Liberar el objectUrl después de un momento (el navegador ya lo leyó)
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
+}
+
+
 /** Petición GET tipada sobre el cliente configurado. */
 export async function apiGet<T>(
   path: string,

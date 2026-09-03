@@ -83,17 +83,26 @@ export interface ProformaDraft {
 export interface ExportedFileInfo {
   filename: string
   absolutePath: string
-  relativePath: string
+  folderPath: string
   mimeType: string
 }
 
 export interface ProformaExportResult {
   idProforma: string
   nombreProyecto: string
-  exportDirectory: string
+  folderPath: string
   excel?: ExportedFileInfo
   pdf?: ExportedFileInfo
   status: ProformaStatus
+}
+
+/** Archivo individual en la carpeta de una proforma (respuesta de GET /proformas/:id/archivos) */
+export interface ProformaFileEntry {
+  filename: string
+  extension: 'pdf' | 'xlsx'
+  sizeBytes: number
+  modifiedAt: string // ISO 8601
+  absolutePath: string
 }
 
 export type ProformaIdAvailability = 'available' | 'in_use' | 'exported'

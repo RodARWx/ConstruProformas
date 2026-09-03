@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -86,13 +85,11 @@ export class ProformasService {
     const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
 
     return this.dataSource.transaction(async (manager) => {
-      // Bloqueo exclusivo: en SQLite WAL esto serializa correctamente
+      // SQLite con WAL serializa las escrituras automáticamente dentro de transacciones.
+      // No se necesita setLock (not supported en better-sqlite3).
       const counter = await manager
         .getRepository(ProformaCounter)
-        .createQueryBuilder('c')
-        .setLock('pessimistic_write')
-        .where('c.year = :year', { year })
-        .getOne();
+        .findOne({ where: { year } });
 
       let nextSequence: number;
 
@@ -112,7 +109,7 @@ export class ProformasService {
           manager.getRepository(ProformaCounter).create({ year, lastSequence: nextSequence }),
         );
       } else {
-        // Incremento atómico
+        // Incremento atómico dentro de la transacción
         nextSequence = counter.lastSequence + 1;
         await manager.getRepository(ProformaCounter).update({ year }, { lastSequence: nextSequence });
       }
@@ -120,6 +117,7 @@ export class ProformasService {
       return buildProformaId(nextSequence, year);
     });
   }
+
 
   /**
    * Devuelve el siguiente ID sugerido SIN reservarlo.
@@ -181,17 +179,12 @@ export class ProformasService {
   }
 
   /**
-   * Actualiza una proforma en borrador, recalculando totales si se envían rubros.
-   * Las proformas exportadas no pueden modificarse.
+   * Actualiza una proforma recalculando totales si se envían rubros.
+   * Si la proforma estaba EXPORTED, vuelve automáticamente a DRAFT;
+   * la siguiente exportación guardará una versión nueva (_V2, _V3...) en el NAS.
    */
   async update(idProforma: string, dto: UpdateProformaDto): Promise<Proforma> {
     const proforma = await this.findOne(idProforma);
-
-    if (proforma.status === ProformaStatus.EXPORTED) {
-      throw new BadRequestException(
-        'No se puede editar una proforma que ya fue exportada',
-      );
-    }
 
     if (dto.profileId !== undefined || dto.customerId !== undefined) {
       await this.validateReferences(
@@ -203,12 +196,20 @@ export class ProformasService {
     if (dto.nombreProyecto !== undefined) proforma.nombreProyecto = dto.nombreProyecto;
     if (dto.fecha !== undefined) proforma.fecha = dto.fecha;
     if (dto.tipoDias !== undefined) proforma.tipoDias = dto.tipoDias;
-    if (dto.status !== undefined) proforma.status = dto.status;
     if (dto.profileId !== undefined) proforma.profileId = dto.profileId;
     if (dto.customerId !== undefined) proforma.customerId = dto.customerId;
     if (dto.notas !== undefined) {
       proforma.notas = serializeProformaNotes(dto.notas);
     }
+
+    // Si estaba exportada y se modifica, vuelve a DRAFT para que la próxima
+    // exportación genere un archivo _V2 en el NAS preservando el original.
+    if (proforma.status === ProformaStatus.EXPORTED) {
+      proforma.status = ProformaStatus.DRAFT;
+    }
+
+    // Permitir cambio explícito de status (ej. sync offline)
+    if (dto.status !== undefined) proforma.status = dto.status;
 
     if (dto.detalles !== undefined) {
       const calculated = calculateProformaTotals(dto.detalles);

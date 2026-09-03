@@ -3,6 +3,7 @@ import {
   apiDelete,
   apiDownloadFile,
   apiGet,
+  apiOpenFileInline,
   apiPatch,
   apiPost,
   ensureArray,
@@ -14,6 +15,7 @@ import type {
   ProformaExportResult,
   Proforma,
   ProformaIdAvailability,
+  ProformaFileEntry,
 } from '../../types/proforma'
 import type {
   CreateProformaPayload,
@@ -80,6 +82,32 @@ export async function downloadExportFile(filename: string): Promise<void> {
   await apiDownloadFile(
     `/export/download/${encodeURIComponent(filename)}`,
     filename,
+  )
+}
+
+/**
+ * Lista todos los archivos (PDF, Excel y versiones) de la carpeta de una proforma en el NAS.
+ * Responde con [] si la carpeta aún no existe.
+ */
+export async function fetchProformaFiles(
+  idProforma: string,
+): Promise<ProformaFileEntry[]> {
+  return apiGet<ProformaFileEntry[]>(
+    `/proformas/${encodeURIComponent(idProforma)}/archivos`,
+  )
+}
+
+/**
+ * Abre un archivo de la carpeta de la proforma en una nueva pestaña del navegador.
+ * Para PDFs el navegador lo renderiza con su visor nativo (inline).
+ * Para Excel el navegador lo descarga.
+ */
+export async function openProformaFile(
+  idProforma: string,
+  filename: string,
+): Promise<void> {
+  await apiOpenFileInline(
+    `/proformas/${encodeURIComponent(idProforma)}/archivos/${encodeURIComponent(filename)}`,
   )
 }
 

@@ -13,6 +13,7 @@ import {
   fetchProforma,
   fetchProformas,
 } from '../../features/proformas/proformasApi'
+import { ProformaFilesPanel } from '../../features/proformas/ProformaFilesPanel'
 import { getApiErrorMessage } from '../../lib/api'
 import { buildExportFilename } from '../../lib/exportFilenames'
 import { formatCurrency } from '../../lib/format'
@@ -27,6 +28,8 @@ export function ProformaHistoryPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [activeId, setActiveId] = useState<string | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
+  /** refreshKey por ID de proforma: incrementar fuerza recarga del panel de archivos */
+  const [fileRefreshKeys, setFileRefreshKeys] = useState<Record<string, number>>({})
   const [tempFilters, setTempFilters] = useState({
     id: '',
     proyecto: '',
@@ -69,6 +72,8 @@ export function ProformaHistoryPage() {
           item.idProforma === idProforma ? refreshed : item,
         ),
       )
+      // Forzar recarga del panel de archivos
+      setFileRefreshKeys((prev) => ({ ...prev, [idProforma]: (prev[idProforma] ?? 0) + 1 }))
 
       const excelFilename = result.excel?.filename
       if (excelFilename) {
@@ -93,6 +98,8 @@ export function ProformaHistoryPage() {
           item.idProforma === idProforma ? refreshed : item,
         ),
       )
+      // Forzar recarga del panel de archivos
+      setFileRefreshKeys((prev) => ({ ...prev, [idProforma]: (prev[idProforma] ?? 0) + 1 }))
 
       const pdfFilename = result.pdf?.filename
       if (pdfFilename) {
@@ -277,20 +284,14 @@ export function ProformaHistoryPage() {
       key: 'acciones',
       header: 'Acciones',
       render: (row) => (
-        <div className="flex flex-wrap gap-2">
-          {row.status === 'DRAFT' ? (
-            <Link to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}>
-              <Button type="button" variant="secondary">
-                Editar borrador
-              </Button>
-            </Link>
-          ) : (
-            <Link to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}>
-              <Button type="button" variant="secondary">
-                Ver (solo lectura)
-              </Button>
-            </Link>
-          )}
+        <>
+          <div className="flex flex-wrap gap-2">
+          {/* Botón Editar (para borradores) o Editar / volver a borrador (para exportadas) */}
+          <Link to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}>
+            <Button type="button" variant="secondary">
+              {row.status === 'DRAFT' ? 'Editar borrador' : 'Editar / nueva versión'}
+            </Button>
+          </Link>
           <Button
             type="button"
             variant="secondary"
@@ -367,7 +368,13 @@ export function ProformaHistoryPage() {
               Eliminar
             </Button>
           )}
-        </div>
+          </div>
+          {/* Panel de versiones en servidor */}
+          <ProformaFilesPanel
+            idProforma={row.idProforma}
+            refreshKey={fileRefreshKeys[row.idProforma] ?? 0}
+          />
+        </>
       ),
     },
   ]
