@@ -7,6 +7,7 @@ import { Category } from '../categories/entities/category.entity';
 import { ItemCatalog } from '../catalog/entities/item-catalog.entity';
 import { Proforma } from '../proformas/entities/proforma.entity';
 import { ProformaDetail } from '../proformas/entities/proforma-detail.entity';
+import { ProformaCounter } from '../proformas/entities/proforma-counter.entity';
 
 export function getDatabaseConfig(): TypeOrmModuleOptions {
   const databasePath =
@@ -25,7 +26,7 @@ export function getDatabaseConfig(): TypeOrmModuleOptions {
   return {
     type: 'better-sqlite3',
     database: databasePath,
-    entities: [Profile, Customer, Category, ItemCatalog, Proforma, ProformaDetail],
+    entities: [Profile, Customer, Category, ItemCatalog, Proforma, ProformaDetail, ProformaCounter],
     synchronize,
     logging: process.env.NODE_ENV !== 'production',
   };

@@ -1,40 +1,70 @@
-/** Prefijo por defecto cuando aún no existen proformas en la base de datos */
-export const DEFAULT_PROFORMA_ID_PREFIX = 'CM-PROF-';
+/**
+ * Formato de ID de proforma: CM_PROF-{numero}-{año}
+ * Ejemplo: CM_PROF-200-2026
+ *
+ * El número se obtiene siempre del contador atómico en base de datos (ProformaCounter).
+ * Este helper solo provee utilidades de parseo y formato.
+ */
+
+/** Prefijo fijo del ID de proforma */
+export const PROFORMA_ID_PREFIX = 'CM_PROF';
 
 /**
- * Extrae el prefijo y el número secuencial de un ID con formato "PREFIJO-N".
- * Ejemplo: "CM-PROF-85" → { prefix: "CM-PROF-", sequence: 85 }
+ * Construye el ID de proforma con el formato oficial:
+ * CM_PROF-{numero}-{año}
  */
-export function parseProformaId(idProforma: string): {
-  prefix: string;
-  sequence: number;
-} | null {
-  const match = idProforma.match(/^(.*-)(\d+)$/);
-  if (!match) {
-    return null;
-  }
-
-  return {
-    prefix: match[1],
-    sequence: parseInt(match[2], 10),
-  };
+export function buildProformaId(sequence: number, year?: number): string {
+  const y = year ?? new Date().getFullYear();
+  return `${PROFORMA_ID_PREFIX}-${sequence}-${y}`;
 }
 
 /**
- * A partir de una lista de IDs existentes, determina el siguiente secuencial
- * reutilizando el prefijo del registro con mayor número.
+ * Parsea un ID de proforma y extrae el número secuencial y el año.
+ * Soporta ambos formatos históricos: CM_PROF-200-2026 y CM-PROF-200-2026
+ * Retorna null si el ID no coincide con ningún formato conocido.
  */
-export function suggestNextProformaId(existingIds: string[]): string {
-  let bestPrefix = DEFAULT_PROFORMA_ID_PREFIX;
-  let maxSequence = 0;
-
-  for (const id of existingIds) {
-    const parsed = parseProformaId(id);
-    if (parsed && parsed.sequence > maxSequence) {
-      maxSequence = parsed.sequence;
-      bestPrefix = parsed.prefix;
-    }
+export function parseProformaId(idProforma: string): {
+  sequence: number;
+  year: number | null;
+} | null {
+  // Nuevo formato: CM_PROF-200-2026
+  const newMatch = idProforma.match(/^CM_PROF-(\d+)-(\d{4})$/);
+  if (newMatch) {
+    return { sequence: parseInt(newMatch[1], 10), year: parseInt(newMatch[2], 10) };
   }
 
-  return `${bestPrefix}${maxSequence + 1}`;
+  // Formato heredado: CM-PROF-200-2026 o CM-PROF-85
+  const legacyFull = idProforma.match(/^CM-PROF-(\d+)-(\d{4})$/);
+  if (legacyFull) {
+    return { sequence: parseInt(legacyFull[1], 10), year: parseInt(legacyFull[2], 10) };
+  }
+
+  const legacySimple = idProforma.match(/^CM-PROF-(\d+)$/);
+  if (legacySimple) {
+    return { sequence: parseInt(legacySimple[1], 10), year: null };
+  }
+
+  // Formato genérico de emergencia: cualquier cosa que termine en -número
+  const genericMatch = idProforma.match(/^(.*-)(\d+)$/);
+  if (genericMatch) {
+    return { sequence: parseInt(genericMatch[2], 10), year: null };
+  }
+
+  return null;
+}
+
+/**
+ * Dado un listado de IDs existentes (para arranque inicial o fallback),
+ * determina el número secuencial máximo en el año actual.
+ * Usado solo como referencia inicial al bootstrap del contador.
+ */
+export function findMaxSequenceForYear(existingIds: string[], year: number): number {
+  let max = 0;
+  for (const id of existingIds) {
+    const parsed = parseProformaId(id);
+    if (parsed && (parsed.year === year || parsed.year === null) && parsed.sequence > max) {
+      max = parsed.sequence;
+    }
+  }
+  return max;
 }

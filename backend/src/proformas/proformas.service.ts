@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { IsNull, Not, Repository } from 'typeorm';
+import { IsNull, Not, Repository, DataSource } from 'typeorm';
 import { Customer } from '../customers/entities/customer.entity';
 import { Profile } from '../profiles/entities/profile.entity';
 import { CreateProformaDto } from './dto/create-proforma.dto';
@@ -14,10 +14,11 @@ import { SyncProformasResult } from './dto/sync-result.dto';
 import { UpdateProformaDto } from './dto/update-proforma.dto';
 import { ProformaDetail } from './entities/proforma-detail.entity';
 import { Proforma } from './entities/proforma.entity';
+import { ProformaCounter } from './entities/proforma-counter.entity';
 import { ProformaStatus } from './enums/proforma-status.enum';
 import { calculateProformaTotals } from './helpers/proforma-calculator.helper';
 import { applyCustomerSnapshotToProforma } from './helpers/proforma-customer-snapshot.helper';
-import { suggestNextProformaId } from './helpers/proforma-id.helper';
+import { buildProformaId, findMaxSequenceForYear } from './helpers/proforma-id.helper';
 import { serializeProformaNotes, parseProformaNotes } from './helpers/proforma-notes.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
 
@@ -32,6 +33,9 @@ export class ProformasService {
     private readonly profileRepository: Repository<Profile>,
     @InjectRepository(Customer)
     private readonly customerRepository: Repository<Customer>,
+    @InjectRepository(ProformaCounter)
+    private readonly counterRepository: Repository<ProformaCounter>,
+    private readonly dataSource: DataSource,
   ) {}
 
   /** Relaciones estándar para respuestas completas al frontend */
@@ -68,17 +72,78 @@ export class ProformasService {
   }
 
   /**
-   * Busca el último ID numérico guardado y sugiere el siguiente secuencial.
-   * Ejemplo: si el último es "CM-PROF-85", retorna "CM-PROF-86".
+   * Genera un ID único para el año actual de forma atómica.
+   *
+   * Usa una transacción con lectura/escritura exclusiva en SQLite para garantizar
+   * que dos peticiones simultáneas nunca reciban el mismo número.
+   *
+   * Al primer uso en un año, inicializa el contador con el valor de
+   * PROFORMA_ID_OFFSET (por defecto 200 para 2026) o con el mayor
+   * número existente en la base de datos si ya hay proformas del año.
+   */
+  async generateNextId(): Promise<string> {
+    const year = new Date().getFullYear();
+    const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
+
+    return this.dataSource.transaction(async (manager) => {
+      // Bloqueo exclusivo: en SQLite WAL esto serializa correctamente
+      const counter = await manager
+        .getRepository(ProformaCounter)
+        .createQueryBuilder('c')
+        .setLock('pessimistic_write')
+        .where('c.year = :year', { year })
+        .getOne();
+
+      let nextSequence: number;
+
+      if (!counter) {
+        // Primer uso del año: determinar el valor inicial
+        const existingRows = await this.proformaRepository.find({
+          select: ['idProforma'],
+          withDeleted: true,
+        });
+        const existingIds = existingRows.map((r) => r.idProforma);
+        const maxInDb = findMaxSequenceForYear(existingIds, year);
+
+        // Usar el mayor entre el offset configurado y el máximo en BD
+        nextSequence = Math.max(offset, maxInDb + 1);
+
+        await manager.getRepository(ProformaCounter).save(
+          manager.getRepository(ProformaCounter).create({ year, lastSequence: nextSequence }),
+        );
+      } else {
+        // Incremento atómico
+        nextSequence = counter.lastSequence + 1;
+        await manager.getRepository(ProformaCounter).update({ year }, { lastSequence: nextSequence });
+      }
+
+      return buildProformaId(nextSequence, year);
+    });
+  }
+
+  /**
+   * Devuelve el siguiente ID sugerido SIN reservarlo.
+   * Usado por el frontend para previsualizar el ID antes de crear la proforma.
    */
   async getNextSuggestedId(): Promise<NextIdResponse> {
-    const rows = await this.proformaRepository.find({
-      select: ['idProforma'],
-      withDeleted: true,
-    });
-    const existingIds = rows.map((row) => row.idProforma);
+    const year = new Date().getFullYear();
+    const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
 
-    return { suggestedId: suggestNextProformaId(existingIds) };
+    const counter = await this.counterRepository.findOne({ where: { year } });
+
+    if (!counter) {
+      // No hay contador aún: calcular desde los IDs existentes
+      const rows = await this.proformaRepository.find({
+        select: ['idProforma'],
+        withDeleted: true,
+      });
+      const existingIds = rows.map((r) => r.idProforma);
+      const maxInDb = findMaxSequenceForYear(existingIds, year);
+      const next = Math.max(offset, maxInDb + 1);
+      return { suggestedId: buildProformaId(next, year) };
+    }
+
+    return { suggestedId: buildProformaId(counter.lastSequence + 1, year) };
   }
 
   /**
@@ -172,14 +237,14 @@ export class ProformasService {
    */
   async clone(idProforma: string): Promise<Proforma> {
     const source = await this.findOne(idProforma);
-    const { suggestedId } = await this.getNextSuggestedId();
+    const newId = await this.generateNextId();
 
     const calculated = calculateProformaTotals(
       source.detalles.map((linea) => this.mapEntityDetailToDto(linea)),
     );
 
     const clone = this.proformaRepository.create({
-      idProforma: suggestedId,
+      idProforma: newId,
       nombreProyecto: `${source.nombreProyecto} (Copia)`,
       tiempoEjecucion: calculated.tiempoEjecucion,
       tipoDias: source.tipoDias ?? 'Días Laborables',
@@ -197,7 +262,7 @@ export class ProformasService {
       iva: calculated.iva,
       totalGeneral: calculated.totalGeneral,
       montoContrato: calculated.montoContrato,
-      detalles: this.mapDetailsToEntities(suggestedId, calculated.detalles),
+      detalles: this.mapDetailsToEntities(newId, calculated.detalles),
     });
 
     if (!clone.clienteNombre) {
