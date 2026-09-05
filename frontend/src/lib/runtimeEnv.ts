@@ -1,7 +1,6 @@
 export type RuntimeEnv = {
   VITE_API_BASE_URL?: string
   VITE_API_KEY?: string
-  VITE_ACCESS_PIN?: string
 }
 
 declare global {
@@ -54,10 +53,6 @@ export function getApiBaseUrl(): string {
 
 export function getApiKey(): string {
   return readEnv('VITE_API_KEY')
-}
-
-export function getAccessPin(): string {
-  return readEnv('VITE_ACCESS_PIN')
 }
 
 /** Indica si la URL apunta al mismo host (típico error: /api en sitio estático). */

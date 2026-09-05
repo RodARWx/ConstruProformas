@@ -35,7 +35,6 @@ const outDir = process.argv[2] ?? join(dirname(fileURLToPath(import.meta.url)), 
 const config = {
   VITE_API_BASE_URL: normalizeApiBaseUrl(process.env.VITE_API_BASE_URL),
   VITE_API_KEY: process.env.VITE_API_KEY ?? '',
-  VITE_ACCESS_PIN: process.env.VITE_ACCESS_PIN ?? '',
 }
 
 mkdirSync(outDir, { recursive: true })

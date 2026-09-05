@@ -1,38 +1,59 @@
 # Dependencias
+node_modules/
 backend/node_modules/
 frontend/node_modules/
 
-# Build frontend
-frontend/dist/
-
-# Variables de entorno frontend
-frontend/.env
-frontend/.env.local
-
-# Build
+# Builds y compilaciones
 backend/dist/
 backend/coverage/
+frontend/dist/
+frontend/dist-ssr/
 
-# Variables de entorno (secretos)
+# Variables de entorno y secretos
 .env
+.env.*
+!.env.example
 backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
 
-# Base de datos y exportaciones (datos de runtime)
+# Bases de datos SQLite y archivos transaccionales (datos de runtime)
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
 data/*.db
+data/*.db-*
 data/exports/
 data/proformas/
+backend/data/
+
+# Archivos de respaldo y temporales
+*.bak
+*.backup
+*.tmp
+~$*
 
 # Logs
+logs/
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# SO / IDE
+# Sistema operativo e IDEs
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-
-# Archivos temporales de Excel (bloqueo al abrir en Office)
-~$*
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
