@@ -108,6 +108,7 @@ export async function openProformaFile(
 ): Promise<void> {
   await apiOpenFileInline(
     `/proformas/${encodeURIComponent(idProforma)}/archivos/${encodeURIComponent(filename)}`,
+    filename,
   )
 }
 

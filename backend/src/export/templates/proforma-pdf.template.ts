@@ -43,7 +43,7 @@ export function renderProformaHtml(
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Proforma ${escapeHtml(proforma.idProforma)}</title>
+  <title>${escapeHtml(proforma.idProforma)} - ${escapeHtml(proforma.nombreProyecto)}</title>
   <style>
     ${fontCss}
 

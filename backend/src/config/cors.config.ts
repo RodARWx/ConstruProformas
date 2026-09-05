@@ -1,4 +1,4 @@
-import type { CorsOptions } from 'cors';
+import type { CorsOptions } from '@nestjs/common/interfaces/external/cors-options.interface';
 
 /** Normaliza URL de origen (sin barra final). */
 export function normalizeOrigin(origin: string): string {
@@ -29,6 +29,7 @@ export function buildCorsOptions(): CorsOptions {
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-API-KEY'],
+    exposedHeaders: ['Content-Disposition'],
     optionsSuccessStatus: 204,
   };
 }

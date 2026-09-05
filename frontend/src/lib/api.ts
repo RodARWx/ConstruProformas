@@ -90,15 +90,51 @@ export async function apiDownloadFile(path: string, filename: string): Promise<v
 }
 
 /**
- * Descarga el archivo como blob (con autenticación) y lo abre en una nueva pestaña.
- * Para PDFs el navegador lo muestra con su visor nativo.
+ * Construye la URL completa hacia un archivo con el token JWT en query param.
+ * Permite que el navegador abra el archivo directamente en una pestaña nueva
+ * preservando el nombre institucional en el visor nativo de PDF y descargas.
  */
-export async function apiOpenFileInline(path: string): Promise<void> {
-  const response = await apiClient.get(path, { responseType: 'blob' })
-  const blob = response.data as Blob
-  const objectUrl = URL.createObjectURL(blob)
-  const tab = window.open(objectUrl, '_blank', 'noopener,noreferrer')
-  if (!tab) {
+export function getAuthenticatedFileUrl(path: string): string {
+  const token = getStoredToken()
+  const cleanPath = path.startsWith('/') ? path : `/${path}`
+  const separator = cleanPath.includes('?') ? '&' : '?'
+  return token
+    ? `${API_BASE_URL}${cleanPath}${separator}token=${encodeURIComponent(token)}`
+    : `${API_BASE_URL}${cleanPath}`
+}
+
+/**
+ * Abre o descarga un archivo de proforma respetando su nombre institucional:
+ * - Excel (.xlsx): Descarga directa inmediata con el nombre exacto de la versión.
+ * - PDF (.pdf): Abre en pestaña nueva con la URL autenticada directa para que el visor nativo
+ *   muestre el nombre real del archivo en la pestaña y al guardarlo.
+ *   Si el navegador bloquea la ventana emergente, recurre a descarga directa como blob.
+ */
+export async function apiOpenFileInline(path: string, filename?: string): Promise<void> {
+  const isExcel =
+    filename?.toLowerCase().endsWith('.xlsx') ||
+    path.toLowerCase().includes('.xlsx')
+
+  // Para archivos Excel: descarga directa con el nombre exacto
+  if (isExcel && filename) {
+    await apiDownloadFile(path, filename)
+    return
+  }
+
+  // Para PDFs: abrir con URL autenticada directa en nueva pestaña
+  const directUrl = getAuthenticatedFileUrl(path)
+  const tab = window.open(directUrl, '_blank', 'noopener,noreferrer')
+  if (tab) {
+    return
+  }
+
+  // Fallback si popup bloqueado: descargar con el nombre sugerido
+  if (filename) {
+    await apiDownloadFile(path, filename)
+  } else {
+    const response = await apiClient.get(path, { responseType: 'blob' })
+    const blob = response.data as Blob
+    const objectUrl = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = objectUrl
     anchor.target = '_blank'
@@ -106,8 +142,8 @@ export async function apiOpenFileInline(path: string): Promise<void> {
     document.body.appendChild(anchor)
     anchor.click()
     anchor.remove()
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
   }
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
 }
 
 

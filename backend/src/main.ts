@@ -16,8 +16,8 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance();
 
   // CORS en Express ANTES del prefijo /api — evita 404 en preflight OPTIONS.
-  expressApp.use(cors(corsOptions));
-  expressApp.options(/.*/, cors(corsOptions));
+  expressApp.use(cors(corsOptions as any));
+  expressApp.options(/.*/, cors(corsOptions as any));
 
   app.enableCors(corsOptions as any);
 

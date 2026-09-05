@@ -61,13 +61,11 @@ export class ExportDownloadController {
 
     const isPdf = file.mimeType === 'application/pdf';
     const stream = createReadStream(file.absolutePath);
+    const dispositionType = isPdf ? 'inline' : 'attachment';
 
     return new StreamableFile(stream, {
       type: file.mimeType,
-      // inline para PDF (se abre en el navegador), attachment para Excel
-      disposition: isPdf
-        ? `inline; filename="${encodeURIComponent(file.safeFilename)}"`
-        : `attachment; filename="${encodeURIComponent(file.safeFilename)}"`,
+      disposition: buildContentDisposition(dispositionType, file.safeFilename),
     });
   }
 
@@ -90,7 +88,20 @@ export class ExportDownloadController {
     const stream = createReadStream(file.absolutePath);
     return new StreamableFile(stream, {
       type: file.mimeType,
-      disposition: `attachment; filename="${encodeURIComponent(file.safeFilename)}"`,
+      disposition: buildContentDisposition('attachment', file.safeFilename),
     });
   }
+}
+
+function buildContentDisposition(
+  dispositionType: 'inline' | 'attachment',
+  filename: string,
+): string {
+  const safeAscii = filename
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^\x20-\x7E]/g, '_')
+    .replace(/["\\]/g, '');
+  const utf8Encoded = encodeURIComponent(filename);
+  return `${dispositionType}; filename="${safeAscii}"; filename*=UTF-8''${utf8Encoded}`;
 }
