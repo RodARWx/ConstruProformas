@@ -1,7 +1,14 @@
 import { type ButtonHTMLAttributes } from 'react'
 import { cn } from '../../lib/cn'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'danger'
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'danger'
+  | 'danger-pastel'
+  | 'export-pdf'
+  | 'export-excel'
+  | 'restore'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -14,7 +21,15 @@ const variantStyles: Record<ButtonVariant, string> = {
   secondary:
     'border border-brand-gray/25 bg-white text-brand-gray hover:bg-brand-gray/5 focus-visible:ring-brand-gray',
   danger:
-    'bg-brand-red text-white hover:bg-brand-red/90 focus-visible:ring-brand-red',
+    'bg-rose-600 text-white hover:bg-rose-700 focus-visible:ring-rose-500',
+  'danger-pastel':
+    'bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover:border-rose-300 focus-visible:ring-rose-300',
+  'export-pdf':
+    'bg-rose-50/90 text-rose-800 border border-rose-200 hover:bg-rose-100 focus-visible:ring-rose-300 shadow-xs',
+  'export-excel':
+    'bg-emerald-50/90 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 focus-visible:ring-emerald-300 shadow-xs',
+  restore:
+    'bg-emerald-700 text-white hover:bg-emerald-800 focus-visible:ring-emerald-600 shadow-xs',
 }
 
 export function Button({

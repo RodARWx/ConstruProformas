@@ -1,6 +1,8 @@
 /**
- * Genera una proforma de prueba CM-PROF-TEST-05 y exporta Excel (+ PDF si LibreOffice/Puppeteer disponible).
- * Uso: npm run build && npm run export:test
+ * [SCRIPT DE DESARROLLO / PRUEBAS LOCALES]
+ * Genera una proforma de prueba sintética y exporta Excel/PDF para verificación manual de diseño.
+ * No interviene en el flujo de producción ni en la base de datos real.
+ * Uso manual: npm run export:test
  */
 const { mkdirSync, existsSync } = require('fs');
 const { join } = require('path');

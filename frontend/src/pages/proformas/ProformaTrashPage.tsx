@@ -102,7 +102,8 @@ export function ProformaTrashPage() {
         <div className="flex items-center gap-2 whitespace-nowrap py-1">
           <Button
             type="button"
-            className="inline-flex items-center gap-1 text-xs py-1.5 px-3 min-h-8 font-semibold rounded-lg bg-emerald-700 hover:bg-emerald-800 opacity-90 hover:opacity-100 text-white transition-opacity shadow-2xs focus-visible:ring-2 focus-visible:ring-emerald-500"
+            variant="restore"
+            className="text-xs py-1.5 px-3 min-h-8 font-semibold inline-flex items-center gap-1"
             onClick={() => void handleRestore(row.idProforma)}
             disabled={activeId === row.idProforma}
             title="Restaurar proforma y archivos al historial"
@@ -112,7 +113,8 @@ export function ProformaTrashPage() {
 
           <Button
             type="button"
-            className="inline-flex items-center gap-1 text-xs py-1.5 px-3 min-h-8 font-semibold rounded-lg bg-rose-600 hover:bg-rose-700 opacity-90 hover:opacity-100 text-white transition-opacity shadow-2xs focus-visible:ring-2 focus-visible:ring-rose-500"
+            variant="danger"
+            className="text-xs py-1.5 px-3 min-h-8 font-semibold inline-flex items-center gap-1"
             onClick={() => setPendingDeleteProforma(row)}
             disabled={activeId === row.idProforma}
             title="Eliminar definitivamente esta proforma y borrar su carpeta en el servidor"

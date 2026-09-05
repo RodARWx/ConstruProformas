@@ -1,7 +1,6 @@
 export { ProformaHeaderForm } from './ProformaHeaderForm'
 export { ProformaDetailTable } from './ProformaDetailTable'
 export { ProformaSaveBar } from './ProformaSaveBar'
-export { ProformaTotalsPreview } from './ProformaTotalsPreview'
 export { ProformaServerTotals } from './ProformaServerTotals'
 export { ProformaFormPage } from './ProformaFormPage'
 export { ApuPanel } from './ApuPanel'

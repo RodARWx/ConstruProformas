@@ -1,3 +1,9 @@
+/**
+ * [SCRIPT DE DESARROLLO / PRUEBAS LOCALES]
+ * Genera una proforma de prueba para verificar diseño y bordes visuales en Excel y PDF.
+ * No interviene en el flujo de producción ni en la base de datos real.
+ * Uso manual: npm run preview
+ */
 import { mkdirSync } from 'fs';
 import { join } from 'path';
 import { buildProformaWorkbook } from '../src/export/helpers/proforma-excel-builder.helper';

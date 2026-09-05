@@ -305,9 +305,7 @@ export function ProformaHistoryPage() {
       header: 'Estado',
       render: (row) => (
         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${row.status === 'EXPORTED'
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-amber-100 text-amber-800'
+          className={`badge-status ${row.status === 'EXPORTED' ? 'badge-status-saved' : 'badge-status-draft'
             }`}
         >
           {row.status === 'EXPORTED' ? 'Guardada' : 'Borrador'}
@@ -326,7 +324,8 @@ export function ProformaHistoryPage() {
             {/* Exportar PDF: botón prioritario */}
             <Button
               type="button"
-              className="bg-amber-600 hover:bg-amber-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-amber-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1 transition-opacity"
+              variant="export-pdf"
+              className="text-xs py-1.5 px-3 min-h-8 font-semibold inline-flex items-center gap-1"
               onClick={() => void handleExportPdf(row)}
               disabled={activeId === row.idProforma}
               title="Exportar y ver archivo PDF"
@@ -337,7 +336,8 @@ export function ProformaHistoryPage() {
             {/* Exportar Excel: descarga directa */}
             <Button
               type="button"
-              className="bg-emerald-600 hover:bg-emerald-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-emerald-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1 transition-opacity"
+              variant="export-excel"
+              className="text-xs py-1.5 px-3 min-h-8 font-semibold inline-flex items-center gap-1"
               onClick={() => void handleExportExcel(row)}
               disabled={activeId === row.idProforma}
               title="Exportar y descargar archivo Excel (.xlsx)"
@@ -363,13 +363,13 @@ export function ProformaHistoryPage() {
 
               {openMenuId === row.idProforma && (
                 <div
-                  className={`absolute right-0 z-50 w-48 rounded-xl border border-brand-gray/20 bg-white py-1.5 shadow-xl transition-all ${isNearBottom ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                  className={`dropdown-action-menu ${isNearBottom ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
                     }`}
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Link
                     to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-gray hover:bg-brand-gray/10 text-left transition-colors"
+                    className="dropdown-action-item"
                     onClick={() => setOpenMenuId(null)}
                   >
                     <span className="text-sm">✏️</span> Editar proforma
@@ -377,7 +377,7 @@ export function ProformaHistoryPage() {
 
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-wine hover:bg-brand-wine/10 text-left transition-colors"
+                    className="dropdown-action-item"
                     onClick={() => {
                       setOpenMenuId(null)
                       setVersionModalTarget(row)
@@ -388,7 +388,7 @@ export function ProformaHistoryPage() {
 
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-gray hover:bg-brand-gray/10 text-left transition-colors"
+                    className="dropdown-action-item"
                     onClick={() => {
                       setOpenMenuId(null)
                       void handleClone(row.idProforma)
@@ -402,7 +402,7 @@ export function ProformaHistoryPage() {
 
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 text-left transition-colors"
+                    className="dropdown-action-item dropdown-action-item-danger"
                     onClick={() => {
                       setOpenMenuId(null)
                       setPendingDeleteProforma(row)
