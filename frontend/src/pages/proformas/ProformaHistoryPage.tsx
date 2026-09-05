@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button, Card, Input, Section, Table } from '../../components/ui'
 import type { TableColumn } from '../../components/ui'
@@ -19,6 +19,42 @@ import { formatCurrency } from '../../lib/format'
 import { getProformaCustomerDisplay } from '../../lib/proformaCustomer'
 import { notify } from '../../lib/toast'
 import type { Proforma } from '../../types/proforma'
+
+const AVAILABLE_COLUMNS: { key: string; label: string }[] = [
+  { key: 'id', label: 'ID' },
+  { key: 'proyecto', label: 'Proyecto' },
+  { key: 'cliente', label: 'Cliente' },
+  { key: 'fecha', label: 'Fecha' },
+  { key: 'subtotal', label: 'Subtotal' },
+  { key: 'iva', label: 'IVA' },
+  { key: 'total', label: 'Total c/ IVA' },
+  { key: 'tiempo', label: 'Días' },
+  { key: 'estado', label: 'Estado' },
+  { key: 'acciones', label: 'Acciones' },
+]
+
+const STORAGE_KEY_VISIBLE_COLUMNS = 'construproformas_history_visible_columns'
+
+function getInitialVisibleColumns(): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_VISIBLE_COLUMNS)
+    if (raw) {
+      return JSON.parse(raw)
+    }
+  } catch {}
+  return {
+    id: true,
+    proyecto: true,
+    cliente: true,
+    fecha: true,
+    subtotal: true,
+    iva: true,
+    total: true,
+    tiempo: true,
+    estado: true,
+    acciones: true,
+  }
+}
 
 export function ProformaHistoryPage() {
   const navigate = useNavigate()
@@ -43,6 +79,30 @@ export function ProformaHistoryPage() {
     fechaDesde: '',
     fechaHasta: '',
   })
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(getInitialVisibleColumns)
+  const [isColumnMenuOpen, setIsColumnMenuOpen] = useState(false)
+  const columnMenuRef = useRef<HTMLDivElement>(null)
+
+  function toggleColumn(key: string) {
+    setVisibleColumns((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      try {
+        localStorage.setItem(STORAGE_KEY_VISIBLE_COLUMNS, JSON.stringify(next))
+      } catch {}
+      return next
+    })
+  }
+
+  function resetColumns() {
+    const defaults: Record<string, boolean> = {}
+    AVAILABLE_COLUMNS.forEach((c) => {
+      defaults[c.key] = true
+    })
+    setVisibleColumns(defaults)
+    try {
+      localStorage.removeItem(STORAGE_KEY_VISIBLE_COLUMNS)
+    } catch {}
+  }
 
   const loadHistory = useCallback(async () => {
     setIsLoading(true)
@@ -61,13 +121,17 @@ export function ProformaHistoryPage() {
   }, [loadHistory])
 
   useEffect(() => {
-    function handleClickOutside() {
+    function handleClickOutside(e: MouseEvent) {
       setOpenMenuId(null)
+      if (columnMenuRef.current && !columnMenuRef.current.contains(e.target as Node)) {
+        setIsColumnMenuOpen(false)
+      }
     }
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         setOpenMenuId(null)
         setPendingDeleteProforma(null)
+        setIsColumnMenuOpen(false)
       }
     }
     document.addEventListener('click', handleClickOutside)
@@ -202,7 +266,8 @@ export function ProformaHistoryPage() {
     })
   }, [items, filters])
 
-  const columns: TableColumn<Proforma>[] = [
+  const columns: TableColumn<Proforma>[] = useMemo(() => {
+    const all: TableColumn<Proforma>[] = [
     { key: 'id', header: 'ID', accessor: 'idProforma' },
     { key: 'proyecto', header: 'Proyecto', accessor: 'nombreProyecto' },
     {
@@ -261,7 +326,7 @@ export function ProformaHistoryPage() {
             {/* Exportar PDF: botón prioritario */}
             <Button
               type="button"
-              className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1"
+              className="bg-amber-600 hover:bg-amber-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-amber-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1 transition-opacity"
               onClick={() => void handleExportPdf(row)}
               disabled={activeId === row.idProforma}
               title="Exportar y ver archivo PDF"
@@ -272,7 +337,7 @@ export function ProformaHistoryPage() {
             {/* Exportar Excel: descarga directa */}
             <Button
               type="button"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1"
+              className="bg-emerald-600 hover:bg-emerald-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-emerald-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1 transition-opacity"
               onClick={() => void handleExportExcel(row)}
               disabled={activeId === row.idProforma}
               title="Exportar y descargar archivo Excel (.xlsx)"
@@ -353,6 +418,8 @@ export function ProformaHistoryPage() {
       },
     },
   ]
+  return all.filter((col) => visibleColumns[col.key] !== false)
+}, [visibleColumns, filteredItems, activeId, openMenuId])
 
   return (
     <div className="space-y-8 text-left">
@@ -426,7 +493,64 @@ export function ProformaHistoryPage() {
         </Card>
       </Section>
 
-      <Section title="Proformas registradas">
+      <Section
+        title="Proformas registradas"
+        action={
+          <div className="relative" ref={columnMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsColumnMenuOpen((prev) => !prev)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-brand-gray/25 bg-white px-3 py-1.5 text-xs font-semibold text-brand-gray hover:bg-brand-gray/5 hover:border-brand-gray/40 transition-colors shadow-2xs focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral"
+              title="Personalizar columnas visibles"
+            >
+              <span>👁️ Columnas</span>
+              <span className="rounded-full bg-brand-gray/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-wine">
+                {Object.values(visibleColumns).filter(Boolean).length}/{AVAILABLE_COLUMNS.length}
+              </span>
+              <span className="text-[9px] text-brand-gray/70">▼</span>
+            </button>
+
+            {isColumnMenuOpen && (
+              <div
+                className="absolute right-0 z-40 mt-1.5 w-56 rounded-xl border border-brand-gray/20 bg-white p-3 shadow-xl space-y-2 text-left animate-fadeIn"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between pb-1.5 border-b border-brand-gray/15">
+                  <span className="text-xs font-bold text-brand-wine">Columnas visibles</span>
+                  <button
+                    type="button"
+                    onClick={resetColumns}
+                    className="text-[11px] text-brand-coral hover:underline font-semibold"
+                  >
+                    Restablecer
+                  </button>
+                </div>
+                <div className="space-y-1 max-h-64 overflow-y-auto pr-1">
+                  {AVAILABLE_COLUMNS.map((col) => {
+                    const isChecked = visibleColumns[col.key] !== false
+                    return (
+                      <label
+                        key={col.key}
+                        className="flex items-center gap-2 px-2 py-1 rounded-md text-xs text-brand-gray hover:bg-brand-gray/5 cursor-pointer select-none transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleColumn(col.key)}
+                          className="rounded border-brand-gray/30 text-brand-coral focus:ring-brand-coral h-3.5 w-3.5"
+                        />
+                        <span className={isChecked ? 'font-medium text-brand-gray' : 'text-brand-gray/40 line-through'}>
+                          {col.label}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        }
+      >
         <Card className="p-0 sm:p-0">
           {isLoading ? (
             <p className="p-6 text-sm text-brand-gray/70">Cargando historial…</p>

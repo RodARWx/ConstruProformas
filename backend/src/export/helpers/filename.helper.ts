@@ -25,12 +25,13 @@ export function buildExportFilename(
   return `${safeBase}.${extension}`;
 }
 
-/** Formatea montos monetarios con 2 decimales para reportes */
+/** Formatea montos monetarios con 2 decimales y símbolo $ para reportes */
 export function formatCurrency(value: number): string {
-  return value.toLocaleString('es-EC', {
+  const num = typeof value === 'number' && !isNaN(value) ? value : 0;
+  return `$${num.toLocaleString('es-EC', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  });
+  })}`;
 }
 
 /** Formatea fecha ISO a presentación legible */

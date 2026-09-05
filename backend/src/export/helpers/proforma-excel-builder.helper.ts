@@ -15,6 +15,7 @@ import {
   fontBook,
   fontGothamBlack,
   headerTableFont,
+  MONEY_FORMAT,
   totalRedFont,
 } from '../constants/excel-styles.constants';
 import { readLogoBuffer, resolveProformaExcelTemplatePath } from './asset-path.helper';
@@ -84,6 +85,7 @@ export async function buildProformaWorkbook(
           cellC.font = fontGothamBlack(cellC.font?.size ?? BRAND_FONT_SIZE, true);
         } else if (r === 8) {
           cellC.font = totalRedFont(cellC.font?.size ?? BRAND_FONT_SIZE);
+          cellC.numFmt = MONEY_FORMAT;
         } else {
           cellC.font = fontBook(cellC.font?.size ?? BRAND_FONT_SIZE, false);
         }

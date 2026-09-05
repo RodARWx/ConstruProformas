@@ -399,6 +399,8 @@ export function populateExcelTemplate(
   sheet.getCell(`G${currentRow}`).alignment = { horizontal: 'right', vertical: 'middle' };
 
   sheet.getCell('C8').value = { formula: `+G${totalRow}` };
+  sheet.getCell('C8').numFmt = MONEY_FORMAT;
+  sheet.getCell('C8').alignment = { horizontal: 'left', vertical: 'middle' };
   sheet.getCell('C9').value = { formula: `C${totalDiasRow}&" "&"${proforma.tipoDias ?? 'Días Laborables'}"` };
 
   currentRow += 2;

@@ -52,6 +52,21 @@ function cellText(value: ExcelJS.CellValue): string {
   return String(value);
 }
 
+export function sanitizeTextAccents(text: string): string {
+  return text
+    .replace(/À/g, 'Á')
+    .replace(/È/g, 'É')
+    .replace(/Ì/g, 'Í')
+    .replace(/Ò/g, 'Ó')
+    .replace(/Ù/g, 'Ú')
+    .replace(/à/g, 'á')
+    .replace(/è/g, 'é')
+    .replace(/ì/g, 'í')
+    .replace(/ò/g, 'ó')
+    .replace(/ù/g, 'ú')
+    .replace(/`/g, "'");
+}
+
 /** Lee rubros desde productos.xlsx a partir de la fila 5 (A=código, B=categoría, C=nombre, D=IVA). */
 export async function readCatalogProductsFromExcel(
   filePath: string,
@@ -74,9 +89,9 @@ export async function readCatalogProductsFromExcel(
       return;
     }
 
-    const codigoSugerido = cellText(row.getCell(1).value).trim();
-    const categoriaNombre = cellText(row.getCell(2).value).trim();
-    const descripcion = cellText(row.getCell(3).value).trim();
+    const codigoSugerido = cellText(row.getCell(1).value).trim().toUpperCase();
+    const categoriaNombre = sanitizeTextAccents(cellText(row.getCell(2).value).trim());
+    const descripcion = sanitizeTextAccents(cellText(row.getCell(3).value).trim());
 
     if (!codigoSugerido && !descripcion) {
       return;

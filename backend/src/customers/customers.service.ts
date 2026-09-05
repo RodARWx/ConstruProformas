@@ -14,6 +14,14 @@ import { Customer } from './entities/customer.entity';
 const MAX_SEARCH_RESULTS = 50;
 const DEFAULT_SEARCH_LIMIT = 20;
 
+function normalizeDiacritics(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .trim();
+}
+
 @Injectable()
 export class CustomersService {
   constructor(
@@ -87,26 +95,34 @@ export class CustomersService {
   }
 
   /**
-   * Búsqueda por coincidencia parcial (LIKE) sobre nombre del cliente o RUC/Cédula.
-   * Patrón alineado con GET /catalog/search para selección en Nueva Proforma.
+   * Búsqueda inteligente insensible a tildes (diacríticos) y mayúsculas/minúsculas
+   * sobre nombre del cliente o RUC/Cédula.
    */
   async searchByText(term: string, limit = DEFAULT_SEARCH_LIMIT): Promise<Customer[]> {
-    const normalizedTerm = term.trim();
+    const trimmedTerm = term.trim();
 
-    if (!normalizedTerm) {
+    if (!trimmedTerm) {
       return [];
     }
 
     const safeLimit = Math.min(Math.max(limit, 1), MAX_SEARCH_RESULTS);
-    const likePattern = `%${normalizedTerm}%`;
+    const searchTokens = normalizeDiacritics(trimmedTerm)
+      .split(/\s+/)
+      .filter(Boolean);
 
-    return this.customerRepository
-      .createQueryBuilder('customer')
-      .where('customer.nombreCliente LIKE :term', { term: likePattern })
-      .orWhere('customer.rucCedula LIKE :term', { term: likePattern })
-      .orderBy('customer.nombreCliente', 'ASC')
-      .take(safeLimit)
-      .getMany();
+    const customers = await this.customerRepository.find({
+      order: { nombreCliente: 'ASC' },
+    });
+
+    const filtered = customers.filter((customer) => {
+      const normName = normalizeDiacritics(customer.nombreCliente);
+      const normRuc = normalizeDiacritics(customer.rucCedula);
+      return searchTokens.every(
+        (token) => normName.includes(token) || normRuc.includes(token),
+      );
+    });
+
+    return filtered.slice(0, safeLimit);
   }
 
   private async assertRucCedulaAvailable(

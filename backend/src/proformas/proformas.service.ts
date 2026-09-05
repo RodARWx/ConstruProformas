@@ -23,6 +23,7 @@ import { buildProformaId, findMaxSequenceForYear, parseProformaId } from './help
 import { serializeProformaNotes, parseProformaNotes } from './helpers/proforma-notes.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
 import { ExportService } from '../export/export.service';
+import { deleteProformaStorageFolders } from '../export/helpers/storage-path.helper';
 
 @Injectable()
 export class ProformasService {
@@ -597,6 +598,10 @@ export class ProformasService {
       );
     }
 
+    // 1. Eliminar físicamente las carpetas y archivos en el almacenamiento NAS
+    deleteProformaStorageFolders(idProforma);
+
+    // 2. Eliminar de la base de datos para liberar el ID
     await this.proformaRepository.remove(proforma);
   }
 

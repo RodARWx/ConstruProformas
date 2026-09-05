@@ -5,6 +5,7 @@ import {
   readdirSync,
   renameSync,
   rmdirSync,
+  rmSync,
   statSync,
 } from 'fs';
 
@@ -76,6 +77,50 @@ export function findExistingProformaFolders(idProforma: string): string[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Elimina físicamente del disco todas las carpetas y archivos asociados al ID de una proforma.
+ * Se invoca durante la eliminación definitiva para no dejar residuos en el almacenamiento NAS.
+ * Retorna las rutas de las carpetas eliminadas.
+ */
+export function deleteProformaStorageFolders(idProforma: string): string[] {
+  const folders = findExistingProformaFolders(idProforma);
+  const deleted: string[] = [];
+
+  for (const folder of folders) {
+    try {
+      if (existsSync(folder)) {
+        rmSync(folder, { recursive: true, force: true });
+        deleted.push(folder);
+      }
+    } catch (err) {
+      console.error(`Error al eliminar la carpeta "${folder}":`, err);
+    }
+  }
+
+  // También limpiar cualquier archivo legacy en data/exports/ si existiera
+  const databasePath =
+    process.env.DATABASE_PATH ?? join(process.cwd(), 'data', 'construproformas.db');
+  const legacyDir = join(dirname(databasePath), 'exports');
+  if (existsSync(legacyDir)) {
+    try {
+      const legacyFiles = readdirSync(legacyDir);
+      for (const file of legacyFiles) {
+        if (isProformaFile(file, idProforma)) {
+          try {
+            rmSync(join(legacyDir, file), { force: true });
+          } catch {
+            // Ignorar
+          }
+        }
+      }
+    } catch {
+      // Ignorar
+    }
+  }
+
+  return deleted;
 }
 
 /**

@@ -1,43 +1,47 @@
 import {
-  DEFAULT_PROFORMA_ID_PREFIX,
+  PROFORMA_ID_PREFIX,
+  buildProformaId,
+  findMaxSequenceForYear,
   parseProformaId,
-  suggestNextProformaId,
 } from './proforma-id.helper';
 
-describe('proforma-id.helper — casos extremos (V2)', () => {
-  describe('parseProformaId', () => {
-    it('rechaza IDs sin secuencial numérico', () => {
-      expect(parseProformaId('CM-PROF')).toBeNull();
-      expect(parseProformaId('')).toBeNull();
-    });
-
-    it('parsea prefijos personalizados', () => {
-      expect(parseProformaId('OBRA-99')).toEqual({
-        prefix: 'OBRA-',
-        sequence: 99,
-      });
+describe('proforma-id.helper', () => {
+  describe('buildProformaId', () => {
+    it('construye ID con formato CM_PROF-{numero}-{año}', () => {
+      expect(buildProformaId(200, 2026)).toBe('CM_PROF-200-2026');
+      expect(buildProformaId(1, 2026)).toBe('CM_PROF-1-2026');
     });
   });
 
-  describe('suggestNextProformaId', () => {
-    it('usa CM-PROF-1 cuando no hay registros', () => {
-      expect(suggestNextProformaId([])).toBe(`${DEFAULT_PROFORMA_ID_PREFIX}1`);
+  describe('parseProformaId', () => {
+    it('parsea formato nuevo CM_PROF-200-2026', () => {
+      expect(parseProformaId('CM_PROF-200-2026')).toEqual({
+        sequence: 200,
+        year: 2026,
+      });
     });
 
-    it('incrementa el mayor secuencial aunque falten números intermedios', () => {
-      expect(suggestNextProformaId(['CM-PROF-3', 'CM-PROF-10'])).toBe(
-        'CM-PROF-11',
-      );
+    it('parsea formato heredado CM-PROF-200-2026', () => {
+      expect(parseProformaId('CM-PROF-200-2026')).toEqual({
+        sequence: 200,
+        year: 2026,
+      });
     });
 
-    it('no reutiliza un ID eliminado lógicamente si aún está en la lista', () => {
-      const ids = ['CM-PROF-8', 'CM-PROF-9', 'CM-PROF-10'];
-      expect(suggestNextProformaId(ids)).toBe('CM-PROF-11');
+    it('rechaza strings inválidos', () => {
+      expect(parseProformaId('CM-PROF')).toBeNull();
+      expect(parseProformaId('')).toBeNull();
+    });
+  });
+
+  describe('findMaxSequenceForYear', () => {
+    it('retorna el número máximo para el año dado', () => {
+      const ids = ['CM_PROF-200-2026', 'CM_PROF-205-2026', 'CM_PROF-300-2025'];
+      expect(findMaxSequenceForYear(ids, 2026)).toBe(205);
     });
 
-    it('permite reutilizar secuencial si el ID fue borrado permanentemente y no está en la lista', () => {
-      const idsAfterPermanentDelete = ['CM-PROF-8'];
-      expect(suggestNextProformaId(idsAfterPermanentDelete)).toBe('CM-PROF-9');
+    it('retorna 0 si no hay coincidencias para el año', () => {
+      expect(findMaxSequenceForYear(['CM_PROF-10-2025'], 2026)).toBe(0);
     });
   });
 });

@@ -18,6 +18,7 @@ import {
   DEFAULT_CATALOG_UNIT_COST,
   readCatalogProductsFromExcel,
   resolveProductosExcelPath,
+  sanitizeTextAccents,
 } from './catalog-excel.seed';
 
 /**
@@ -50,6 +51,7 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
     await this.seedGenericCustomer();
     await this.assignUncategorizedRubros();
     await this.seedCatalogFromExcel();
+    await this.sanitizeCatalogAccents();
   }
 
   /**
@@ -242,4 +244,58 @@ export class DatabaseSeedService implements OnApplicationBootstrap {
       this.logger.error(`No se pudo sembrar el catálogo desde Excel: ${message}`);
     }
   }
+
+  /**
+   * Sanea categorías y rubros asegurando que no existan tildes invertidas ni
+   * errores ortográficos en el catálogo.
+   */
+  private async sanitizeCatalogAccents(): Promise<void> {
+    const oldCat = await this.categoryRepository.findOne({
+      where: { nombre: 'CÀLCULO' },
+    });
+    if (oldCat) {
+      const targetCat = await this.categoryRepository.findOne({
+        where: { nombre: 'CÁLCULO' },
+      });
+      if (!targetCat) {
+        await this.categoryRepository.save({
+          nombre: 'CÁLCULO',
+          descripcion: oldCat.descripcion,
+        });
+      }
+      await this.itemCatalogRepository.update(
+        { categoriaNombre: 'CÀLCULO' },
+        { categoriaNombre: 'CÁLCULO' },
+      );
+      await this.categoryRepository.delete({ nombre: 'CÀLCULO' });
+      this.logger.log('Categoría CÀLCULO corregida a CÁLCULO');
+    }
+
+    const allItems = await this.itemCatalogRepository.find();
+    let updatedCount = 0;
+    for (const item of allItems) {
+      let changed = false;
+      const cleanDesc = sanitizeTextAccents(item.descripcion);
+      if (cleanDesc !== item.descripcion) {
+        item.descripcion = cleanDesc;
+        changed = true;
+      }
+      if (item.codigoSugerido && item.codigoSugerido !== item.codigoSugerido.toUpperCase()) {
+        item.codigoSugerido = item.codigoSugerido.toUpperCase();
+        changed = true;
+      }
+      if (item.categoriaNombre === 'CÀLCULO') {
+        item.categoriaNombre = 'CÁLCULO';
+        changed = true;
+      }
+      if (changed) {
+        await this.itemCatalogRepository.save(item);
+        updatedCount += 1;
+      }
+    }
+    if (updatedCount > 0) {
+      this.logger.log(`${updatedCount} rubro(s) del catálogo saneados`);
+    }
+  }
 }
+

@@ -76,7 +76,7 @@ describe('proforma-excel-layout.helper', () => {
     const subtotalCell = sheet.getCell(`G${layout.totalsStartRow + 1}`);
     expect(subtotalCell.value).toEqual({ formula: 'SUM(G14,G15)' });
 
-    const diasCell = sheet.getCell(`G${layout.totalsStartRow}`);
+    const diasCell = sheet.getCell(`C${layout.totalsStartRow}`);
     expect(diasCell.value).toEqual({ formula: 'SUM(C14,C15)' });
   });
 });

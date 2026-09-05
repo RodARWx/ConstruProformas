@@ -193,7 +193,7 @@ export function ProformaSaveBar() {
           {latestPdf && (
             <Button
               type="button"
-              className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500 py-2 px-3 font-medium text-xs shadow-sm"
+              className="bg-amber-600 hover:bg-amber-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-amber-500 py-2 px-3 font-medium text-xs shadow-sm transition-opacity"
               onClick={() => void handleOpenFile(latestPdf.filename)}
               disabled={isSaving || openingFile === latestPdf.filename}
               title={`Abrir ${latestPdf.filename} en nueva pestaña`}
@@ -205,7 +205,7 @@ export function ProformaSaveBar() {
           {latestExcel && (
             <Button
               type="button"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500 py-2 px-3 font-medium text-xs shadow-sm"
+              className="bg-emerald-600 hover:bg-emerald-700 opacity-90 hover:opacity-100 text-white border-none focus-visible:ring-emerald-500 py-2 px-3 font-medium text-xs shadow-sm transition-opacity"
               onClick={() => void handleOpenFile(latestExcel.filename)}
               disabled={isSaving || openingFile === latestExcel.filename}
               title={`Descargar ${latestExcel.filename}`}
