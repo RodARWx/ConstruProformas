@@ -14,7 +14,7 @@ describe('AuthService', () => {
 
   const mockConfigService = {
     get: jest.fn((key: string) => {
-      if (key === 'APP_PIN') return '123456';
+      if (key === 'APP_PIN') return '2585';
       if (key === 'JWT_EXPIRES_IN_SECONDS') return 28800;
       return null;
     }),
@@ -37,23 +37,23 @@ describe('AuthService', () => {
 
   describe('timingSafeCompare', () => {
     it('debe retornar true para cadenas idénticas', () => {
-      expect(timingSafeCompare('123456', '123456')).toBe(true);
+      expect(timingSafeCompare('2585', '2585')).toBe(true);
       expect(timingSafeCompare('secret-pin', 'secret-pin')).toBe(true);
     });
 
     it('debe retornar false para cadenas distintas de igual longitud', () => {
-      expect(timingSafeCompare('123456', '123457')).toBe(false);
+      expect(timingSafeCompare('2585', '2586')).toBe(false);
     });
 
     it('debe retornar false para cadenas de distinta longitud sin lanzar error', () => {
-      expect(timingSafeCompare('123', '123456')).toBe(false);
-      expect(timingSafeCompare('123456789', '123456')).toBe(false);
+      expect(timingSafeCompare('258', '2585')).toBe(false);
+      expect(timingSafeCompare('258599', '2585')).toBe(false);
     });
   });
 
   describe('login', () => {
     it('debe conceder acceso y retornar un JWT cuando el PIN es correcto', async () => {
-      const result = await service.login('123456');
+      const result = await service.login('2585');
 
       expect(result).toEqual({
         access_token: 'mock-jwt-token',
@@ -87,7 +87,7 @@ describe('AuthService', () => {
 
       // 6to intento dentro del período de bloqueo: sigue bloqueado
       try {
-        await service.login('123456'); // incluso con PIN correcto
+        await service.login('2585'); // incluso con PIN correcto
         fail('Debió permanecer bloqueado');
       } catch (err: any) {
         expect(err).toBeInstanceOf(HttpException);
@@ -101,7 +101,7 @@ describe('AuthService', () => {
       await expect(service.login('wrong')).rejects.toThrow(UnauthorizedException);
 
       // 1 éxito
-      const ok = await service.login('123456');
+      const ok = await service.login('2585');
       expect(ok.access_token).toBe('mock-jwt-token');
 
       // Si falla de nuevo, debe ser el intento 1 (no el intento 3)

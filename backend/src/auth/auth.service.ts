@@ -67,7 +67,7 @@ export class AuthService {
     const expectedPin =
       this.configService.get<string>('APP_PIN') ??
       process.env.APP_PIN ??
-      '123456';
+      '2585';
 
     const isValid = timingSafeCompare(pin.trim(), expectedPin.trim());
 
