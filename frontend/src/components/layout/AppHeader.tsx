@@ -1,6 +1,6 @@
 import { BrandLogo } from './BrandLogo'
 import { ConnectionStatusBadge } from './ConnectionStatusBadge'
-import { RoleBadge } from './RoleBadge'
+import { LogoutButton } from './LogoutButton'
 
 export function AppHeader() {
   return (
@@ -14,7 +14,7 @@ export function AppHeader() {
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <ConnectionStatusBadge />
-          <RoleBadge className="hidden shrink-0 sm:inline-flex" />
+          <LogoutButton />
         </div>
       </div>
     </header>

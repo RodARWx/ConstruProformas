@@ -63,6 +63,14 @@ export class ProformasController {
     return this.proformasService.syncBatch(dto.proformas);
   }
 
+  /**
+   * Verifica la disponibilidad de un ID de proforma antes de crearlo.
+   */
+  @Get('availability/:id')
+  checkAvailability(@Param('id') id: string) {
+    return this.proformasService.checkAvailability(id);
+  }
+
   /** Obtiene una proforma activa por su ID editable */
   @Get(':id')
   findOne(@Param('id') id: string): Promise<Proforma> {

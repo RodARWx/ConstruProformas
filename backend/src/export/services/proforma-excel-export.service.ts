@@ -33,7 +33,7 @@ export class ProformaExcelExportService {
    * Si la proforma no ha cambiado y el archivo ya existe, el caller puede optar por
    * no invocar este método y servir el archivo existente directamente.
    */
-  async export(proforma: Proforma): Promise<ExportedFileInfo> {
+  async export(proforma: Proforma, targetVersion?: number): Promise<ExportedFileInfo> {
     const prepared = await this.prepareForExport(proforma);
 
     const folderPath = ensureProformaFolder(
@@ -47,7 +47,12 @@ export class ProformaExcelExportService {
       'xlsx',
     );
 
-    const filename = resolveVersionedFilename(folderPath, baseFilename);
+    const filename = resolveVersionedFilename(
+      folderPath,
+      baseFilename,
+      targetVersion,
+      prepared.idProforma,
+    );
     const absolutePath = join(folderPath, filename);
 
     const { workbook } = await buildProformaWorkbook(prepared);

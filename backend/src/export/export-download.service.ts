@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import { basename, extname, join } from 'path';
 import {
   buildProformaFolderPath,
+  isProformaFile,
   listProformaFiles,
   ProformaFileEntry,
 } from './helpers/storage-path.helper';
@@ -14,7 +15,7 @@ export class ExportDownloadService {
   /**
    * Valida el nombre de archivo y resuelve la ruta física dentro de la carpeta
    * de la proforma en el NAS.
-   * Rechaza path traversal (../) y extensiones no permitidas.
+   * Rechaza path traversal (../), extensiones no permitidas y archivos que no correspondan al ID.
    */
   async resolveProformaFile(
     idProforma: string,
@@ -30,18 +31,25 @@ export class ExportDownloadService {
       throw new BadRequestException('Nombre de archivo inválido');
     }
 
-    const extension = extname(safeFilename).toLowerCase();
-    if (!ALLOWED_EXTENSIONS.has(extension)) {
+    if (!isProformaFile(safeFilename, idProforma)) {
       throw new BadRequestException(
-        'Solo se permiten archivos .xlsx o .pdf exportados',
+        `El archivo "${safeFilename}" no corresponde a la proforma ${idProforma}`,
       );
     }
 
+    const extension = extname(safeFilename).toLowerCase();
+
     const folderPath = buildProformaFolderPath(idProforma, nombreProyecto);
-    const absolutePath = join(folderPath, safeFilename);
+    let absolutePath = join(folderPath, safeFilename);
 
     if (!existsSync(absolutePath)) {
-      return null;
+      const { getExportsDirectory } = await import('./helpers/storage-path.helper');
+      const legacyPath = join(getExportsDirectory(), safeFilename);
+      if (existsSync(legacyPath)) {
+        absolutePath = legacyPath;
+      } else {
+        return null;
+      }
     }
 
     const mimeType =

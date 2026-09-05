@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { CatalogModule } from '../catalog/catalog.module';
 import { ProformasModule } from '../proformas/proformas.module';
 import { ExportDownloadController } from './export-download.controller';
@@ -10,7 +10,7 @@ import { ProformaHtmlPdfService } from './services/proforma-html-pdf.service';
 import { ProformaPdfExportService } from './services/proforma-pdf-export.service';
 
 @Module({
-  imports: [ProformasModule, CatalogModule],
+  imports: [forwardRef(() => ProformasModule), CatalogModule],
   controllers: [ProformaExportController, ExportDownloadController],
   providers: [
     ExportService,

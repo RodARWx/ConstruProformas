@@ -35,6 +35,8 @@ export function ProformaHeaderForm() {
   const [idConflictMessage, setIdConflictMessage] = useState<string | undefined>()
 
   const isIdLocked = Boolean(editingProformaId)
+  const [isTitleUnlocked, setIsTitleUnlocked] = useState(false)
+  const isTitleLocked = isIdLocked && !isTitleUnlocked
   const disabled = isReadOnly || isLoadingRefs
 
   const loadSuggestedId = useCallback(async () => {
@@ -269,8 +271,20 @@ export function ProformaHeaderForm() {
                 }
                 error={headerFieldErrors.nombreProyecto}
                 required
-                disabled={disabled}
+                disabled={disabled || isTitleLocked}
               />
+              {isIdLocked && !isTitleUnlocked && (
+                <div className="mt-1 flex items-center justify-between text-xs text-brand-gray/80">
+                  <span>🔒 Título fijo en edición para mantener continuidad de versiones.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsTitleUnlocked(true)}
+                    className="font-medium text-brand-wine underline hover:text-brand-coral"
+                  >
+                    Desbloquear título
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="sm:col-span-2">

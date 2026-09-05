@@ -2,6 +2,8 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Not, Repository, DataSource } from 'typeorm';
@@ -17,9 +19,10 @@ import { ProformaCounter } from './entities/proforma-counter.entity';
 import { ProformaStatus } from './enums/proforma-status.enum';
 import { calculateProformaTotals } from './helpers/proforma-calculator.helper';
 import { applyCustomerSnapshotToProforma } from './helpers/proforma-customer-snapshot.helper';
-import { buildProformaId, findMaxSequenceForYear } from './helpers/proforma-id.helper';
+import { buildProformaId, findMaxSequenceForYear, parseProformaId } from './helpers/proforma-id.helper';
 import { serializeProformaNotes, parseProformaNotes } from './helpers/proforma-notes.helper';
 import { CreateProformaDetailDto } from './dto/create-proforma-detail.dto';
+import { ExportService } from '../export/export.service';
 
 @Injectable()
 export class ProformasService {
@@ -35,6 +38,8 @@ export class ProformasService {
     @InjectRepository(ProformaCounter)
     private readonly counterRepository: Repository<ProformaCounter>,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => ExportService))
+    private readonly exportService: ExportService,
   ) {}
 
   /** Relaciones estándar para respuestas completas al frontend */
@@ -43,7 +48,10 @@ export class ProformasService {
   async findAll(): Promise<Proforma[]> {
     return this.proformaRepository.find({
       relations: [...this.defaultRelations],
-      order: { fecha: 'DESC' },
+      // Ordenar por ID descendente: CM_PROF-22-2026 > CM_PROF-21-2026 > ...
+      // TypeORM ordena idProforma como string pero el número va relleno con ceros en la clave,
+      // por lo que la ordenación lexicográfica coincide con la numérica.
+      order: { idProforma: 'DESC' },
     });
   }
 
@@ -71,77 +79,162 @@ export class ProformasService {
   }
 
   /**
+   * Sincroniza y actualiza el contador del año para que siempre sea al menos
+   * el número secuencial mayor registrado en la base de datos (tanto activas como en papelera).
+   */
+  private async syncAndGetMaxSequence(year: number): Promise<{
+    counterSequence: number;
+    maxInDb: number;
+    existingIds: Set<string>;
+  }> {
+    const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
+
+    const rows = await this.proformaRepository.find({
+      select: ['idProforma'],
+      withDeleted: true,
+    });
+    const existingIds = new Set(rows.map((r) => r.idProforma));
+    const maxInDb = findMaxSequenceForYear(Array.from(existingIds), year);
+
+    let counter = await this.counterRepository.findOne({ where: { year } });
+
+    // El contador debe ser al menos el offset - 1 y al menos el máximo en base de datos
+    const targetLastSequence = Math.max(
+      offset - 1,
+      counter?.lastSequence ?? 0,
+      maxInDb,
+    );
+
+    if (!counter) {
+      counter = await this.counterRepository.save(
+        this.counterRepository.create({ year, lastSequence: targetLastSequence }),
+      );
+    } else if (counter.lastSequence < targetLastSequence) {
+      await this.counterRepository.update({ year }, { lastSequence: targetLastSequence });
+      counter.lastSequence = targetLastSequence;
+    }
+
+    return {
+      counterSequence: counter.lastSequence,
+      maxInDb,
+      existingIds,
+    };
+  }
+
+  /**
+   * Actualiza el contador persistido en base de datos si la secuencia provista
+   * es mayor a la actualmente almacenada.
+   */
+  async updateCounterIfHigher(sequence: number, year: number): Promise<void> {
+    const counter = await this.counterRepository.findOne({ where: { year } });
+    if (!counter) {
+      await this.counterRepository.save(
+        this.counterRepository.create({ year, lastSequence: sequence }),
+      );
+    } else if (sequence > counter.lastSequence) {
+      await this.counterRepository.update({ year }, { lastSequence: sequence });
+    }
+  }
+
+  /**
    * Genera un ID único para el año actual de forma atómica.
-   *
-   * Usa una transacción con lectura/escritura exclusiva en SQLite para garantizar
-   * que dos peticiones simultáneas nunca reciban el mismo número.
-   *
-   * Al primer uso en un año, inicializa el contador con el valor de
-   * PROFORMA_ID_OFFSET (por defecto 200 para 2026) o con el mayor
-   * número existente en la base de datos si ya hay proformas del año.
+   * Usado al clonar una proforma.
    */
   async generateNextId(): Promise<string> {
     const year = new Date().getFullYear();
-    const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
 
     return this.dataSource.transaction(async (manager) => {
-      // SQLite con WAL serializa las escrituras automáticamente dentro de transacciones.
-      // No se necesita setLock (not supported en better-sqlite3).
-      const counter = await manager
-        .getRepository(ProformaCounter)
-        .findOne({ where: { year } });
+      const counterRepo = manager.getRepository(ProformaCounter);
+      const proformaRepo = manager.getRepository(Proforma);
+      const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
 
-      let nextSequence: number;
+      const rows = await proformaRepo.find({
+        select: ['idProforma'],
+        withDeleted: true,
+      });
+      const existingIds = new Set(rows.map((r) => r.idProforma));
+      const maxInDb = findMaxSequenceForYear(Array.from(existingIds), year);
+
+      const counter = await counterRepo.findOne({ where: { year } });
+      const currentSeq = Math.max(
+        offset - 1,
+        counter?.lastSequence ?? 0,
+        maxInDb,
+      );
+
+      let nextSequence = currentSeq + 1;
+      while (existingIds.has(buildProformaId(nextSequence, year))) {
+        nextSequence++;
+      }
 
       if (!counter) {
-        // Primer uso del año: determinar el valor inicial
-        const existingRows = await this.proformaRepository.find({
-          select: ['idProforma'],
-          withDeleted: true,
-        });
-        const existingIds = existingRows.map((r) => r.idProforma);
-        const maxInDb = findMaxSequenceForYear(existingIds, year);
-
-        // Usar el mayor entre el offset configurado y el máximo en BD
-        nextSequence = Math.max(offset, maxInDb + 1);
-
-        await manager.getRepository(ProformaCounter).save(
-          manager.getRepository(ProformaCounter).create({ year, lastSequence: nextSequence }),
+        await counterRepo.save(
+          counterRepo.create({ year, lastSequence: nextSequence }),
         );
       } else {
-        // Incremento atómico dentro de la transacción
-        nextSequence = counter.lastSequence + 1;
-        await manager.getRepository(ProformaCounter).update({ year }, { lastSequence: nextSequence });
+        await counterRepo.update({ year }, { lastSequence: nextSequence });
       }
 
       return buildProformaId(nextSequence, year);
     });
   }
 
-
   /**
    * Devuelve el siguiente ID sugerido SIN reservarlo.
    * Usado por el frontend para previsualizar el ID antes de crear la proforma.
+   * Garantiza que el ID sugerido sea superior a todas las proformas existentes
+   * (tanto activas como en papelera) y no colisione con ninguna.
    */
   async getNextSuggestedId(): Promise<NextIdResponse> {
     const year = new Date().getFullYear();
-    const offset = parseInt(process.env.PROFORMA_ID_OFFSET ?? '200', 10);
+    const { counterSequence, existingIds } = await this.syncAndGetMaxSequence(year);
 
-    const counter = await this.counterRepository.findOne({ where: { year } });
-
-    if (!counter) {
-      // No hay contador aún: calcular desde los IDs existentes
-      const rows = await this.proformaRepository.find({
-        select: ['idProforma'],
-        withDeleted: true,
-      });
-      const existingIds = rows.map((r) => r.idProforma);
-      const maxInDb = findMaxSequenceForYear(existingIds, year);
-      const next = Math.max(offset, maxInDb + 1);
-      return { suggestedId: buildProformaId(next, year) };
+    let nextSequence = counterSequence + 1;
+    while (existingIds.has(buildProformaId(nextSequence, year))) {
+      nextSequence++;
     }
 
-    return { suggestedId: buildProformaId(counter.lastSequence + 1, year) };
+    return { suggestedId: buildProformaId(nextSequence, year) };
+  }
+
+  /**
+   * Verifica la disponibilidad de un ID de proforma antes de crearlo.
+   */
+  async checkAvailability(idProforma: string): Promise<{
+    available: boolean;
+    status: 'available' | 'exported' | 'in_use' | 'in_trash';
+    message?: string;
+  }> {
+    const existing = await this.proformaRepository.findOne({
+      where: { idProforma },
+      withDeleted: true,
+    });
+
+    if (!existing) {
+      return { available: true, status: 'available' };
+    }
+
+    if (existing.deletedAt) {
+      return {
+        available: false,
+        status: 'in_trash',
+        message: `El ID "${idProforma}" está en la papelera. Restáurelo o elimínelo permanentemente antes de reutilizarlo.`,
+      };
+    }
+
+    if (existing.status === ProformaStatus.EXPORTED) {
+      return {
+        available: false,
+        status: 'exported',
+        message: `El ID "${idProforma}" ya existe en una proforma guardada.`,
+      };
+    }
+
+    return {
+      available: false,
+      status: 'in_use',
+      message: `El ID "${idProforma}" ya está en uso.`,
+    };
   }
 
   /**
@@ -175,13 +268,30 @@ export class ProformasService {
     applyCustomerSnapshotToProforma(proforma, customer);
 
     const saved = await this.proformaRepository.save(proforma);
+
+    // Actualizar el contador del año para que nunca quede atrasado
+    const parsed = parseProformaId(saved.idProforma);
+    if (parsed?.sequence) {
+      const year = parsed.year ?? new Date().getFullYear();
+      await this.updateCounterIfHigher(parsed.sequence, year);
+    }
+
+    try {
+      await this.exportService.generateVersion(saved.idProforma, true);
+    } catch (err) {
+      console.error(
+        `Error al auto-generar versión para proforma ${saved.idProforma}:`,
+        err,
+      );
+    }
+
     return this.findOne(saved.idProforma);
   }
 
   /**
    * Actualiza una proforma recalculando totales si se envían rubros.
-   * Si la proforma estaba EXPORTED, vuelve automáticamente a DRAFT;
-   * la siguiente exportación guardará una versión nueva (_V2, _V3...) en el NAS.
+   * Guarda los cambios y genera automáticamente la siguiente versión (_V2, _V3...)
+   * coordinada en Excel y PDF en el almacenamiento.
    */
   async update(idProforma: string, dto: UpdateProformaDto): Promise<Proforma> {
     const proforma = await this.findOne(idProforma);
@@ -200,12 +310,6 @@ export class ProformasService {
     if (dto.customerId !== undefined) proforma.customerId = dto.customerId;
     if (dto.notas !== undefined) {
       proforma.notas = serializeProformaNotes(dto.notas);
-    }
-
-    // Si estaba exportada y se modifica, vuelve a DRAFT para que la próxima
-    // exportación genere un archivo _V2 en el NAS preservando el original.
-    if (proforma.status === ProformaStatus.EXPORTED) {
-      proforma.status = ProformaStatus.DRAFT;
     }
 
     // Permitir cambio explícito de status (ej. sync offline)
@@ -229,6 +333,16 @@ export class ProformasService {
     applyCustomerSnapshotToProforma(proforma, customer);
 
     await this.proformaRepository.save(proforma);
+
+    try {
+      await this.exportService.generateVersion(idProforma, true);
+    } catch (err) {
+      console.error(
+        `Error al auto-generar versión para proforma ${idProforma}:`,
+        err,
+      );
+    }
+
     return this.findOne(idProforma);
   }
 

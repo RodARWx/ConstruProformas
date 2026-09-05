@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Card } from '../../components/ui'
 import { useProformaDraft } from '../../context/ProformaDraftContext'
 import { getApiErrorMessage } from '../../lib/api'
 import { notify } from '../../lib/toast'
 import { ProformaDetailTable } from './ProformaDetailTable'
 import { ProformaHeaderForm } from './ProformaHeaderForm'
 import { ProformaSaveBar } from './ProformaSaveBar'
-import { fetchProforma } from './proformasApi'
+import { fetchNextProformaId, fetchProforma } from './proformasApi'
 
 interface ProformaFormPageProps {
   mode: 'create' | 'edit'
@@ -16,36 +15,56 @@ interface ProformaFormPageProps {
 export function ProformaFormPage({ mode }: ProformaFormPageProps) {
   const { id } = useParams()
   const proformaId = mode === 'edit' ? id : undefined
-  const { isReadOnly, loadFromProforma } = useProformaDraft()
-  const [isLoading, setIsLoading] = useState(mode === 'edit')
+  const { loadFromProforma, resetForNew } = useProformaDraft()
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (mode === 'create') {
-      setIsLoading(false)
-      return
-    }
-    if (mode !== 'edit' || !proformaId) return
-
     let cancelled = false
-    setIsLoading(true)
 
-    fetchProforma(proformaId)
-      .then((proforma) => {
-        if (!cancelled) loadFromProforma(proforma)
-      })
-      .catch((error) => {
-        if (!cancelled) {
-          notify.error('No se pudo cargar la proforma', getApiErrorMessage(error))
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
+    if (mode === 'create') {
+      setIsLoading(true)
+      fetchNextProformaId()
+        .then(({ suggestedId }) => {
+          if (!cancelled) {
+            resetForNew(suggestedId)
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            resetForNew()
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setIsLoading(false)
+          }
+        })
 
-    return () => {
-      cancelled = true
+      return () => {
+        cancelled = true
+      }
     }
-  }, [mode, proformaId, loadFromProforma])
+
+    if (mode === 'edit' && proformaId) {
+      setIsLoading(true)
+      fetchProforma(proformaId)
+        .then((proforma) => {
+          if (!cancelled) loadFromProforma(proforma)
+        })
+        .catch((error) => {
+          if (!cancelled) {
+            notify.error('No se pudo cargar la proforma', getApiErrorMessage(error))
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false)
+        })
+
+      return () => {
+        cancelled = true
+      }
+    }
+  }, [mode, proformaId, loadFromProforma, resetForNew])
 
   if (isLoading) {
     return <p className="text-left text-sm text-brand-gray/70">Cargando proforma…</p>
@@ -58,28 +77,15 @@ export function ProformaFormPage({ mode }: ProformaFormPageProps) {
           {mode === 'edit' ? 'Editar proforma' : 'Nueva proforma'}
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-brand-gray/80">
-          {isReadOnly
-            ? 'Vista de solo lectura: las proformas exportadas no admiten edición.'
-            : 'Complete la cabecera y el detalle de rubros, luego guarde el borrador en el servidor.'}
+          Complete la cabecera y el detalle de rubros. Al guardar se genera automáticamente la versión en Excel y PDF.
         </p>
-        {mode === 'edit' && (
-          <Link
-            to="/proformas"
-            className="app-text-link mt-3 inline-block text-sm"
-          >
-            ← Volver al historial
-          </Link>
-        )}
+        <Link
+          to="/proformas"
+          className="app-text-link mt-3 inline-block text-sm"
+        >
+          ← Volver al historial
+        </Link>
       </header>
-
-      {isReadOnly && (
-        <Card className="border-brand-wine/20 bg-brand-wine/5">
-          <p className="text-sm text-brand-wine">
-            Esta proforma tiene estado <strong>EXPORTED</strong>. El backend rechaza
-            cambios en registros ya exportados; la edición está deshabilitada.
-          </p>
-        </Card>
-      )}
 
       <ProformaHeaderForm />
       <ProformaDetailTable />

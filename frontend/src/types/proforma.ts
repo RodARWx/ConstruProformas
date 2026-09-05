@@ -103,9 +103,11 @@ export interface ProformaFileEntry {
   sizeBytes: number
   modifiedAt: string // ISO 8601
   absolutePath: string
+  version?: number
+  isLatest?: boolean
 }
 
-export type ProformaIdAvailability = 'available' | 'in_use' | 'exported'
+export type ProformaIdAvailability = 'available' | 'in_use' | 'exported' | 'in_trash'
 
 export function createEmptyHeaderDraft(
   suggestedId = '',

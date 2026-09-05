@@ -148,10 +148,12 @@ export async function checkProformaIdAvailability(
   if (!trimmed) return 'available'
 
   try {
-    const existing = await apiGet<Proforma>(
-      `/proformas/${encodeURIComponent(trimmed)}`,
-    )
-    return existing.status === 'EXPORTED' ? 'exported' : 'in_use'
+    const res = await apiGet<{
+      available: boolean
+      status: ProformaIdAvailability
+      message?: string
+    }>(`/proformas/availability/${encodeURIComponent(trimmed)}`)
+    return res.status
   } catch (error) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       return 'available'
@@ -159,7 +161,7 @@ export async function checkProformaIdAvailability(
     if (isApiConflict(error)) {
       return 'exported'
     }
-    throw error
+    return 'in_use'
   }
 }
 
@@ -168,11 +170,18 @@ export function getIdConflictMessage(
   availability: ProformaIdAvailability,
   suggestedId?: string,
 ): string {
+  if (availability === 'in_trash') {
+    const suffix = suggestedId
+      ? ` Use el sugerido (${suggestedId}) o restáurelo desde la papelera.`
+      : ' Restáurelo desde la papelera o elija otro número.'
+    return `El ID "${idProforma}" está en la papelera.${suffix}`
+  }
+
   if (availability === 'exported') {
     const suffix = suggestedId
       ? ` Cambie el ID o use el sugerido (${suggestedId}).`
       : ' Cambie el ID o use el sugerido por el servidor.'
-    return `El ID "${idProforma}" ya existe en una proforma exportada.${suffix}`
+    return `El ID "${idProforma}" ya existe en una proforma guardada.${suffix}`
   }
 
   if (availability === 'in_use') {

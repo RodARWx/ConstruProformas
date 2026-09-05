@@ -156,7 +156,7 @@ export function ProformaDraftProvider({ children }: { children: ReactNode }) {
     setDraft(next)
     setEditingProformaId(proforma.idProforma)
     setSavedProformaState(proforma)
-    setIsReadOnly(proforma.status === 'EXPORTED')
+    setIsReadOnly(false) // Siempre editable: si estaba EXPORTED, el backend genera _V2 al re-exportar
     setHeaderFieldErrors({})
     setDetailFieldError(undefined)
     writeStoredDraft(next)
@@ -185,7 +185,7 @@ export function ProformaDraftProvider({ children }: { children: ReactNode }) {
     setSavedProformaState(proforma)
     if (proforma) {
       setEditingProformaId(proforma.idProforma)
-      setIsReadOnly(proforma.status === 'EXPORTED')
+      setIsReadOnly(false) // Siempre editable: guardar cambios crea V2 en próxima exportación
     }
   }, [])
 

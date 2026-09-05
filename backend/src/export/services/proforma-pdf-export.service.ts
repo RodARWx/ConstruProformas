@@ -26,6 +26,7 @@ export class ProformaPdfExportService {
   async exportFromXlsx(
     proforma: Proforma,
     _xlsxAbsolutePath: string,
+    targetVersion?: number,
   ): Promise<ExportedFileInfo> {
     const folderPath = ensureProformaFolder(
       proforma.idProforma,
@@ -38,7 +39,12 @@ export class ProformaPdfExportService {
       'pdf',
     );
 
-    const filename = resolveVersionedFilename(folderPath, baseFilename);
+    const filename = resolveVersionedFilename(
+      folderPath,
+      baseFilename,
+      targetVersion,
+      proforma.idProforma,
+    );
     const absolutePath = join(folderPath, filename);
 
     this.logger.log(`Generando PDF vía Puppeteer para ${proforma.idProforma} → ${filename}`);

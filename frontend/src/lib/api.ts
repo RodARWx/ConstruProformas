@@ -3,19 +3,32 @@ import { getApiBaseUrl, isLikelyMisconfiguredApiUrl } from './runtimeEnv'
 
 const API_BASE_URL = getApiBaseUrl()
 
-/** Token de sesión almacenado en sessionStorage. */
+/** Token de sesión almacenado en localStorage para persistir entre pestañas y recargas. */
 const TOKEN_KEY = 'construproformas_jwt'
 
 export function getStoredToken(): string | null {
-  return sessionStorage.getItem(TOKEN_KEY)
+  try {
+    return localStorage.getItem(TOKEN_KEY) ?? sessionStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
 }
 
 export function storeToken(token: string): void {
-  sessionStorage.setItem(TOKEN_KEY, token)
+  try {
+    localStorage.setItem(TOKEN_KEY, token)
+  } catch {
+    sessionStorage.setItem(TOKEN_KEY, token)
+  }
 }
 
 export function clearToken(): void {
-  sessionStorage.removeItem(TOKEN_KEY)
+  try {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
+  } catch {
+    // Ignore storage clear errors
+  }
 }
 
 /** Cliente HTTP centralizado para la API de Construproformas. */
@@ -41,8 +54,10 @@ apiClient.interceptors.response.use(
   (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       clearToken()
-      // Redirigir a la pantalla de acceso sin romper React Router
-      window.location.href = '/acceso'
+      // Redirigir a la pantalla de acceso solo si no estamos ya en ella
+      if (window.location.pathname !== '/acceso') {
+        window.location.href = '/acceso'
+      }
     }
     return Promise.reject(error)
   },

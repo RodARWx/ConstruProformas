@@ -1,14 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { existsSync } from 'fs';
 import { ProformaStatus } from '../proformas/enums/proforma-status.enum';
 import { ProformasService } from '../proformas/proformas.service';
 import { ProformaExportResult } from './dto/export-result.dto';
-import { buildExportFilename } from './helpers/filename.helper';
 import {
-  buildProformaFolderPath,
   ensureProformaFolder,
+  getMaxVersionInFolder,
+  listProformaFiles,
 } from './helpers/storage-path.helper';
-import { join } from 'path';
 import { ProformaExcelExportService } from './services/proforma-excel-export.service';
 import { ProformaPdfExportService } from './services/proforma-pdf-export.service';
 
@@ -17,26 +16,72 @@ export type ExportFormat = 'excel' | 'pdf' | 'both';
 @Injectable()
 export class ExportService {
   constructor(
+    @Inject(forwardRef(() => ProformasService))
     private readonly proformasService: ProformasService,
     private readonly excelExportService: ProformaExcelExportService,
     private readonly pdfExportService: ProformaPdfExportService,
   ) {}
 
   /**
-   * Genera archivos de exportación y los guarda en la carpeta estructurada del NAS.
-   *
-   * Versionado inteligente:
-   * - Si el archivo base ya existe Y la proforma no ha cambiado desde la última exportación
-   *   (status === EXPORTED), se sirve el archivo existente sin regenerar.
-   * - Si la proforma fue modificada (status !== EXPORTED), siempre genera un nuevo archivo
-   *   (con sufijo _V2, _V3... si el base ya existe) y marca como EXPORTED.
+   * Genera una versión completa (tanto Excel como PDF) en el servidor/NAS.
+   * Si forceNewVersion es true, incrementa la versión (V1 -> V2 -> V3).
+   * Marca automáticamente la proforma como EXPORTED.
+   */
+  async generateVersion(
+    idProforma: string,
+    forceNewVersion = true,
+  ): Promise<ProformaExportResult> {
+    const proforma = await this.proformasService.findOne(idProforma);
+    const folderPath = ensureProformaFolder(
+      proforma.idProforma,
+      proforma.nombreProyecto,
+    );
+
+    const maxExisting = getMaxVersionInFolder(
+      folderPath,
+      proforma.idProforma,
+    );
+    const targetVersion = forceNewVersion
+      ? maxExisting === 0
+        ? 1
+        : maxExisting + 1
+      : Math.max(1, maxExisting);
+
+    // Generar tanto Excel como PDF coordinados en la misma versión
+    const excelInfo = await this.excelExportService.export(
+      proforma,
+      targetVersion,
+    );
+    const pdfInfo = await this.pdfExportService.exportFromXlsx(
+      proforma,
+      excelInfo.absolutePath,
+      targetVersion,
+    );
+
+    await this.proformasService.markAsExported(idProforma);
+
+    return {
+      idProforma: proforma.idProforma,
+      nombreProyecto: proforma.nombreProyecto,
+      folderPath,
+      status: ProformaStatus.EXPORTED,
+      excel: excelInfo,
+      pdf: pdfInfo,
+    };
+  }
+
+  /**
+   * Obtiene o genera los archivos de exportación de una proforma.
+   * Si la proforma ya fue guardada/exportada y los archivos de la versión más reciente
+   * existen en disco, los devuelve directamente SIN crear una versión nueva.
+   * Solo si algún archivo falta, lo genera para la versión actual.
    */
   async exportProforma(
     idProforma: string,
     format: ExportFormat = 'both',
   ): Promise<ProformaExportResult> {
     const proforma = await this.proformasService.findOne(idProforma);
-    const folderPath = buildProformaFolderPath(
+    const folderPath = ensureProformaFolder(
       proforma.idProforma,
       proforma.nombreProyecto,
     );
@@ -48,69 +93,71 @@ export class ExportService {
       status: proforma.status,
     };
 
-    // ── Comprobar si la proforma ya está exportada y el archivo existe ──
-    // Si status === EXPORTED y el archivo base ya existe en disco, no regeneramos.
-    const alreadyExported = proforma.status === ProformaStatus.EXPORTED;
-
-    const baseXlsxFilename = buildExportFilename(
+    const existingFiles = listProformaFiles(
       proforma.idProforma,
       proforma.nombreProyecto,
-      'xlsx',
     );
-    const basePdfFilename = buildExportFilename(
-      proforma.idProforma,
-      proforma.nombreProyecto,
-      'pdf',
+    const latestExcel = existingFiles.find(
+      (f) => f.extension === 'xlsx' && f.isLatest,
+    );
+    const latestPdf = existingFiles.find(
+      (f) => f.extension === 'pdf' && f.isLatest,
     );
 
-    const existingXlsxPath = join(folderPath, baseXlsxFilename);
-    const existingPdfPath = join(folderPath, basePdfFilename);
+    // Si no existe ningún archivo exportado para la proforma, generamos V1
+    if (!latestExcel && !latestPdf) {
+      return this.generateVersion(idProforma, true);
+    }
 
-    const xlsxAlreadyOnDisk = existsSync(existingXlsxPath);
-    const pdfAlreadyOnDisk = existsSync(existingPdfPath);
+    const targetVersion = Math.max(
+      latestExcel?.version ?? 1,
+      latestPdf?.version ?? 1,
+    );
 
     // ── Excel ──
     if (format === 'excel' || format === 'both') {
-      if (alreadyExported && xlsxAlreadyOnDisk) {
-        // Servir archivo existente sin regenerar
+      if (
+        latestExcel &&
+        latestExcel.version === targetVersion &&
+        existsSync(latestExcel.absolutePath)
+      ) {
         result.excel = {
-          filename: baseXlsxFilename,
-          absolutePath: existingXlsxPath,
+          filename: latestExcel.filename,
+          absolutePath: latestExcel.absolutePath,
           folderPath,
-          mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          mimeType:
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         };
       } else {
-        ensureProformaFolder(proforma.idProforma, proforma.nombreProyecto);
-        result.excel = await this.excelExportService.export(proforma);
+        result.excel = await this.excelExportService.export(
+          proforma,
+          targetVersion,
+        );
       }
     }
 
     // ── PDF ──
     if (format === 'pdf' || format === 'both') {
-      if (alreadyExported && pdfAlreadyOnDisk) {
-        // Servir archivo existente sin regenerar
+      if (
+        latestPdf &&
+        latestPdf.version === targetVersion &&
+        existsSync(latestPdf.absolutePath)
+      ) {
         result.pdf = {
-          filename: basePdfFilename,
-          absolutePath: existingPdfPath,
+          filename: latestPdf.filename,
+          absolutePath: latestPdf.absolutePath,
           folderPath,
           mimeType: 'application/pdf',
         };
       } else {
-        // Necesitamos xlsx como fuente (aunque no lo retornemos si format===pdf)
-        const xlsxPath = result.excel?.absolutePath ?? existingXlsxPath;
-        ensureProformaFolder(proforma.idProforma, proforma.nombreProyecto);
-        result.pdf = await this.pdfExportService.exportFromXlsx(proforma, xlsxPath);
-
-        if (format === 'pdf' && result.excel) {
-          delete result.excel;
-        }
+        const xlsxPath =
+          result.excel?.absolutePath ?? latestExcel?.absolutePath ?? '';
+        result.pdf = await this.pdfExportService.exportFromXlsx(
+          proforma,
+          xlsxPath,
+          targetVersion,
+        );
       }
-    }
-
-    // Marcar como EXPORTED solo si se generó algo nuevo
-    if (!alreadyExported) {
-      await this.proformasService.markAsExported(idProforma);
-      result.status = ProformaStatus.EXPORTED;
     }
 
     return result;

@@ -6,16 +6,15 @@ import { useProformaDraft } from '../../context/ProformaDraftContext'
 import {
   cloneProforma,
   deleteProforma,
-  downloadExportFile,
   exportProformaExcel,
   exportProformaPdf,
   fetchNextProformaId,
   fetchProforma,
   fetchProformas,
+  openProformaFile,
 } from '../../features/proformas/proformasApi'
-import { ProformaFilesPanel } from '../../features/proformas/ProformaFilesPanel'
+import { ProformaVersionsModal } from '../../features/proformas/ProformaVersionsModal'
 import { getApiErrorMessage } from '../../lib/api'
-import { buildExportFilename } from '../../lib/exportFilenames'
 import { formatCurrency } from '../../lib/format'
 import { getProformaCustomerDisplay } from '../../lib/proformaCustomer'
 import { notify } from '../../lib/toast'
@@ -27,9 +26,9 @@ export function ProformaHistoryPage() {
   const [items, setItems] = useState<Proforma[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [activeId, setActiveId] = useState<string | null>(null)
-  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
-  /** refreshKey por ID de proforma: incrementar fuerza recarga del panel de archivos */
-  const [fileRefreshKeys, setFileRefreshKeys] = useState<Record<string, number>>({})
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [pendingDeleteProforma, setPendingDeleteProforma] = useState<Proforma | null>(null)
+  const [versionModalTarget, setVersionModalTarget] = useState<Proforma | null>(null)
   const [tempFilters, setTempFilters] = useState({
     id: '',
     proyecto: '',
@@ -61,6 +60,28 @@ export function ProformaHistoryPage() {
     void loadHistory()
   }, [loadHistory])
 
+  useEffect(() => {
+    function handleClickOutside() {
+      setOpenMenuId(null)
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setOpenMenuId(null)
+        setPendingDeleteProforma(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [])
+
+  /**
+   * Exporta la proforma (generando archivos nuevos / con versión si había cambios)
+   * y luego abre el Excel en el visor/descarga del navegador.
+   */
   async function handleExportExcel(proforma: Proforma) {
     const { idProforma } = proforma
     setActiveId(idProforma)
@@ -72,13 +93,11 @@ export function ProformaHistoryPage() {
           item.idProforma === idProforma ? refreshed : item,
         ),
       )
-      // Forzar recarga del panel de archivos
-      setFileRefreshKeys((prev) => ({ ...prev, [idProforma]: (prev[idProforma] ?? 0) + 1 }))
 
       const excelFilename = result.excel?.filename
       if (excelFilename) {
-        await downloadExportFile(excelFilename)
-        notify.success('Excel exportado', 'Archivo descargado en su dispositivo.')
+        await openProformaFile(idProforma, excelFilename)
+        notify.success('Excel exportado', 'Archivo generado y descargando.')
       }
     } catch (error) {
       notify.error('No se pudo exportar a Excel', getApiErrorMessage(error))
@@ -87,6 +106,9 @@ export function ProformaHistoryPage() {
     }
   }
 
+  /**
+   * Exporta la proforma a PDF y la abre en nueva pestaña del navegador.
+   */
   async function handleExportPdf(proforma: Proforma) {
     const { idProforma } = proforma
     setActiveId(idProforma)
@@ -98,76 +120,14 @@ export function ProformaHistoryPage() {
           item.idProforma === idProforma ? refreshed : item,
         ),
       )
-      // Forzar recarga del panel de archivos
-      setFileRefreshKeys((prev) => ({ ...prev, [idProforma]: (prev[idProforma] ?? 0) + 1 }))
 
       const pdfFilename = result.pdf?.filename
       if (pdfFilename) {
-        await downloadExportFile(pdfFilename)
-        notify.success('PDF exportado', 'Archivo descargado en su dispositivo.')
+        await openProformaFile(idProforma, pdfFilename)
+        notify.success('PDF exportado', 'Abriendo en nueva pestaña.')
       }
     } catch (error) {
       notify.error('No se pudo exportar a PDF', getApiErrorMessage(error))
-    } finally {
-      setActiveId(null)
-    }
-  }
-
-  async function handleDownloadExcel(proforma: Proforma) {
-    const excelName = buildExportFilename(
-      proforma.idProforma,
-      proforma.nombreProyecto,
-      'xlsx',
-    )
-    setActiveId(proforma.idProforma)
-    try {
-      await downloadExportFile(excelName)
-      notify.success('Descarga iniciada', 'Excel descargado.')
-    } catch {
-      try {
-        const result = await exportProformaExcel(proforma.idProforma)
-        const refreshed = await fetchProforma(proforma.idProforma)
-        setItems((current) =>
-          current.map((item) =>
-            item.idProforma === proforma.idProforma ? refreshed : item,
-          ),
-        )
-        const filename = result.excel?.filename ?? excelName
-        await downloadExportFile(filename)
-        notify.success('Descarga iniciada', 'Excel descargado.')
-      } catch (retryError) {
-        notify.error('No se pudo descargar el Excel', getApiErrorMessage(retryError))
-      }
-    } finally {
-      setActiveId(null)
-    }
-  }
-
-  async function handleDownloadPdf(proforma: Proforma) {
-    const pdfName = buildExportFilename(
-      proforma.idProforma,
-      proforma.nombreProyecto,
-      'pdf',
-    )
-    setActiveId(proforma.idProforma)
-    try {
-      await downloadExportFile(pdfName)
-      notify.success('Descarga iniciada', 'PDF descargado.')
-    } catch {
-      try {
-        const result = await exportProformaPdf(proforma.idProforma)
-        const refreshed = await fetchProforma(proforma.idProforma)
-        setItems((current) =>
-          current.map((item) =>
-            item.idProforma === proforma.idProforma ? refreshed : item,
-          ),
-        )
-        const filename = result.pdf?.filename ?? pdfName
-        await downloadExportFile(filename)
-        notify.success('Descarga iniciada', 'PDF descargado.')
-      } catch (retryError) {
-        notify.error('No se pudo descargar el PDF', getApiErrorMessage(retryError))
-      }
     } finally {
       setActiveId(null)
     }
@@ -180,7 +140,7 @@ export function ProformaHistoryPage() {
       setItems((current) =>
         current.filter((item) => item.idProforma !== idProforma),
       )
-      setPendingDeleteId(null)
+      setPendingDeleteProforma(null)
       notify.success('Proforma enviada a la papelera')
     } catch (error) {
       notify.error('No se pudo eliminar la proforma', getApiErrorMessage(error))
@@ -278,104 +238,119 @@ export function ProformaHistoryPage() {
     {
       key: 'estado',
       header: 'Estado',
-      render: (row) => (row.status === 'EXPORTED' ? 'Exportada' : 'Borrador'),
+      render: (row) => (
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${row.status === 'EXPORTED'
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-amber-100 text-amber-800'
+            }`}
+        >
+          {row.status === 'EXPORTED' ? 'Guardada' : 'Borrador'}
+        </span>
+      ),
     },
     {
       key: 'acciones',
       header: 'Acciones',
-      render: (row) => (
-        <>
-          <div className="flex flex-wrap gap-2">
-          {/* Botón Editar (para borradores) o Editar / volver a borrador (para exportadas) */}
-          <Link to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}>
-            <Button type="button" variant="secondary">
-              {row.status === 'DRAFT' ? 'Editar borrador' : 'Editar / nueva versión'}
-            </Button>
-          </Link>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => void handleClone(row.idProforma)}
-            disabled={activeId === row.idProforma}
-          >
-            Clonar proforma
-          </Button>
-          {row.status === 'EXPORTED' ? (
-            <>
-              <Button
-                type="button"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500"
-                onClick={() => void handleDownloadExcel(row)}
-                disabled={activeId === row.idProforma}
-              >
-                Descargar Excel
-              </Button>
-              <Button
-                type="button"
-                className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500"
-                onClick={() => void handleDownloadPdf(row)}
-                disabled={activeId === row.idProforma}
-              >
-                Descargar PDF
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                type="button"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500"
-                onClick={() => void handleExportExcel(row)}
-                disabled={activeId === row.idProforma}
-              >
-                Exportar Excel
-              </Button>
-              <Button
-                type="button"
-                className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500"
-                onClick={() => void handleExportPdf(row)}
-                disabled={activeId === row.idProforma}
-              >
-                Exportar PDF
-              </Button>
-            </>
-          )}
-          {pendingDeleteId === row.idProforma ? (
-            <>
-              <Button
-                type="button"
-                variant="danger"
-                onClick={() => void handleDelete(row.idProforma)}
-                disabled={activeId === row.idProforma}
-              >
-                Confirmar
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setPendingDeleteId(null)}
-                disabled={activeId === row.idProforma}
-              >
-                Cancelar
-              </Button>
-            </>
-          ) : (
+      render: (row, rowIndex) => {
+        const isNearBottom =
+          rowIndex >= Math.max(0, filteredItems.length - 2) && filteredItems.length >= 3
+
+        return (
+          <div className="flex items-center gap-1.5 whitespace-nowrap py-1">
+            {/* Exportar PDF: botón prioritario */}
             <Button
               type="button"
-              variant="danger"
-              onClick={() => setPendingDeleteId(row.idProforma)}
+              className="bg-amber-600 hover:bg-amber-700 text-white border-none focus-visible:ring-amber-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1"
+              onClick={() => void handleExportPdf(row)}
               disabled={activeId === row.idProforma}
+              title="Exportar y ver archivo PDF"
             >
-              Eliminar
+              {activeId === row.idProforma ? 'Generando…' : '📄 PDF'}
             </Button>
-          )}
+
+            {/* Exportar Excel: descarga directa */}
+            <Button
+              type="button"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white border-none focus-visible:ring-emerald-500 text-xs py-1.5 px-3 min-h-8 font-semibold shadow-xs inline-flex items-center gap-1"
+              onClick={() => void handleExportExcel(row)}
+              disabled={activeId === row.idProforma}
+              title="Exportar y descargar archivo Excel (.xlsx)"
+            >
+              {activeId === row.idProforma ? 'Generando…' : '📊 Excel'}
+            </Button>
+
+            {/* Menú de más acciones ⋮ */}
+            <div className="relative inline-block text-left">
+              <button
+                type="button"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-brand-gray/30 bg-white text-base font-bold text-brand-gray hover:bg-brand-gray/10 hover:border-brand-gray/50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-coral"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setOpenMenuId(openMenuId === row.idProforma ? null : row.idProforma)
+                }}
+                aria-haspopup="true"
+                aria-expanded={openMenuId === row.idProforma}
+                title="Más opciones (Editar, Versiones, Clonar, Eliminar)"
+              >
+                ⋮
+              </button>
+
+              {openMenuId === row.idProforma && (
+                <div
+                  className={`absolute right-0 z-50 w-48 rounded-xl border border-brand-gray/20 bg-white py-1.5 shadow-xl transition-all ${isNearBottom ? 'bottom-full mb-1.5' : 'top-full mt-1.5'
+                    }`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Link
+                    to={`/proformas/${encodeURIComponent(row.idProforma)}/editar`}
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-gray hover:bg-brand-gray/10 text-left transition-colors"
+                    onClick={() => setOpenMenuId(null)}
+                  >
+                    <span className="text-sm">✏️</span> Editar proforma
+                  </Link>
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-wine hover:bg-brand-wine/10 text-left transition-colors"
+                    onClick={() => {
+                      setOpenMenuId(null)
+                      setVersionModalTarget(row)
+                    }}
+                  >
+                    <span className="text-sm">📁</span> Ver versiones
+                  </button>
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-brand-gray hover:bg-brand-gray/10 text-left transition-colors"
+                    onClick={() => {
+                      setOpenMenuId(null)
+                      void handleClone(row.idProforma)
+                    }}
+                    disabled={activeId === row.idProforma}
+                  >
+                    <span className="text-sm">📋</span> Clonar proforma
+                  </button>
+
+                  <div className="my-1 border-t border-brand-gray/15" />
+
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2.5 px-3.5 py-2 text-xs font-medium text-red-600 hover:bg-red-50 text-left transition-colors"
+                    onClick={() => {
+                      setOpenMenuId(null)
+                      setPendingDeleteProforma(row)
+                    }}
+                  >
+                    <span className="text-sm">🗑️</span> Mover a papelera
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          {/* Panel de versiones en servidor */}
-          <ProformaFilesPanel
-            idProforma={row.idProforma}
-            refreshKey={fileRefreshKeys[row.idProforma] ?? 0}
-          />
-        </>
-      ),
+        )
+      },
     },
   ]
 
@@ -466,6 +441,59 @@ export function ProformaHistoryPage() {
           )}
         </Card>
       </Section>
+
+      <ProformaVersionsModal
+        idProforma={versionModalTarget?.idProforma ?? null}
+        nombreProyecto={versionModalTarget?.nombreProyecto}
+        isOpen={Boolean(versionModalTarget)}
+        onClose={() => setVersionModalTarget(null)}
+      />
+
+      {/* Modal de confirmación para eliminar */}
+      {pendingDeleteProforma && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs"
+          onClick={() => setPendingDeleteProforma(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl space-y-4 border border-brand-gray/20 text-left"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 font-bold text-lg">
+                ⚠️
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-brand-wine">
+                  ¿Mover proforma a la papelera?
+                </h3>
+                <p className="text-xs text-brand-gray/80 leading-relaxed">
+                  La proforma <strong className="text-brand-gray font-semibold">{pendingDeleteProforma.idProforma}</strong> ({pendingDeleteProforma.nombreProyecto}) se moverá a la papelera. Podrá restaurarla en cualquier momento desde la sección Papelera.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2.5 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setPendingDeleteProforma(null)}
+                disabled={activeId === pendingDeleteProforma.idProforma}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => void handleDelete(pendingDeleteProforma.idProforma)}
+                disabled={activeId === pendingDeleteProforma.idProforma}
+              >
+                {activeId === pendingDeleteProforma.idProforma ? 'Moviendo…' : 'Sí, mover a papelera'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

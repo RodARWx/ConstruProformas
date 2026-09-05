@@ -11,12 +11,21 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>('JWT_SECRET') ?? 'construproformas-dev-secret',
-        signOptions: {
-          expiresIn: configService.get<number>('JWT_EXPIRES_IN_SECONDS') ?? 28800,
-        },
-      }),
+      useFactory: (configService: ConfigService) => {
+        const rawExpires =
+          configService.get<string | number>('JWT_EXPIRES_IN_SECONDS') ??
+          process.env.JWT_EXPIRES_IN_SECONDS ??
+          28800;
+        const expiresIn = Number(rawExpires) || 28800;
+        return {
+          secret:
+            configService.get<string>('JWT_SECRET') ??
+            'construproformas-dev-secret',
+          signOptions: {
+            expiresIn,
+          },
+        };
+      },
       inject: [ConfigService],
     }),
   ],
