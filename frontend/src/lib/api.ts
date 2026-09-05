@@ -121,29 +121,15 @@ export async function apiOpenFileInline(path: string, filename?: string): Promis
     return
   }
 
-  // Para PDFs: abrir con URL autenticada directa en nueva pestaña
+  // Para PDFs: abrir únicamente en pestaña nueva con la URL autenticada directa
   const directUrl = getAuthenticatedFileUrl(path)
-  const tab = window.open(directUrl, '_blank', 'noopener,noreferrer')
-  if (tab) {
-    return
-  }
-
-  // Fallback si popup bloqueado: descargar con el nombre sugerido
-  if (filename) {
-    await apiDownloadFile(path, filename)
-  } else {
-    const response = await apiClient.get(path, { responseType: 'blob' })
-    const blob = response.data as Blob
-    const objectUrl = URL.createObjectURL(blob)
-    const anchor = document.createElement('a')
-    anchor.href = objectUrl
-    anchor.target = '_blank'
-    anchor.rel = 'noopener'
-    document.body.appendChild(anchor)
-    anchor.click()
-    anchor.remove()
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 10_000)
-  }
+  const anchor = document.createElement('a')
+  anchor.href = directUrl
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
 }
 
 
