@@ -261,7 +261,17 @@ export function renderProformaHtml(
       border-right: none;
     }
 
+    .rubros-table tr {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+
     /* Filas de categoría */
+    .rubros-table tbody tr.row-category {
+      break-after: avoid;
+      page-break-after: avoid;
+    }
+
     .rubros-table tbody tr.row-category td,
     .rubros-table tr.row-category td,
     .row-category td {
@@ -302,6 +312,8 @@ export function renderProformaHtml(
       flex-direction: column;
       align-items: flex-end;
       padding: 2px 14px 6px 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     .total-row {
@@ -334,6 +346,8 @@ export function renderProformaHtml(
     .section-notas {
       border-bottom: none;
       padding: 6px 14px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     .section-notas .notas-title {
@@ -361,6 +375,8 @@ export function renderProformaHtml(
       justify-content: space-between;
       padding: 8px 14px;
       margin-top: 50px;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     .footer-left {
